@@ -1,0 +1,42 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+company_cache.json
+positions.json
+positions.json.migrated
+*.migrated
+subscribers.json
+users.yaml
+*.log
+.streamlit/secrets.toml
+
+# runtime state / generated data — never commit
+.alert_throttle.json
+.briefing_sent_date
+strategy_reviews.json
+strategy_reviews.json.*
+
+broker_config.json
+
+# accounts / app data (local server storage)
+app_data/
+accounts.json
+user_data/
+
+# ngrok (authtoken!) + local Windows launchers — NEVER commit
+ngrok.yml
+*.vbs
+ngrok_watchdog.pyw
+
+# runtime locks
+.monitor_daemon.lock
+
+# per-user Telegram connect tokens + swing factor cache (runtime, may hold ids)
+.telegram_pending.json
+.swing_factors_cache.json
+
+# encrypted broker credentials (also covered by user_data/) + never any key file
+broker.enc
+*.key
+.veterans_edge/

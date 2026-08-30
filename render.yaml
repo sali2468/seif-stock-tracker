@@ -1,0 +1,64 @@
+# Render Blueprint for Veteran's Edge.
+# Push this repo to GitHub, then in Render: New → Blueprint → pick the repo.
+# Render reads this file and creates the service + disk. Fill the `sync: false`
+# secrets in the dashboard afterwards (they are never committed).
+#
+# NOTE: a persistent disk requires a paid instance (Starter, ~$7/mo). The free
+# plan has NO disk, so accounts/positions would reset on every restart.
+
+services:
+  - type: web
+    name: veterans-edge
+    runtime: python
+    plan: starter
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+
+    # Persistent disk — ALL user data lives here (see DATA_DIR below) so it
+    # survives restarts and redeploys. This is what keeps accounts safe.
+    disk:
+      name: veterans-edge-data
+      mountPath: /var/data
+      sizeGB: 1
+
+    envVars:
+      # Where the app writes accounts / positions / encrypted broker keys.
+      - key: DATA_DIR
+        value: /var/data
+      - key: PYTHON_VERSION
+        value: 3.12.10
+
+      # ── Secrets — set these in the Render dashboard (Environment tab) ────────
+      - key: ADMIN_USER            # your admin username, e.g. seif2468
+        sync: false
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY          # optional (AI fallback)
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN    # optional (alerts)
+        sync: false
+      - key: TELEGRAM_CHAT_ID      # optional (owner chat)
+        sync: false
+
+      # Broker-key encryption. Generate ONE Fernet key (see README) and paste it.
+      # Keep it forever — losing it makes saved broker connections undecryptable.
+      - key: BROKER_ENC_KEY
+        sync: false
+
+      # Session signing key — Render generates a stable random value for you, so
+      # logins survive redeploys. No action needed.
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # ── Optional email (password reset etc.) ────────────────────────────────
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_PORT
+        sync: false
