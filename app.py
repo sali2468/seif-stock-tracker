@@ -1116,7 +1116,7 @@ with st.sidebar:
     # ── Brand ─────────────────────────────────────────────────────────────────
     st.markdown(
         '<div style="padding:12px 4px 16px">'
-        '<span class="brand-title">Veteran\'s Edge</span>'
+        '<span class="brand-title">StockPal</span>'
         '<span class="brand-pro">PRO</span>'
         '<div class="brand-sub" style="margin-top:3px">AI Trading Dashboard</div>'
         '</div>',

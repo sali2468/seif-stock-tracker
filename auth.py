@@ -353,7 +353,7 @@ def _show_auth():
     with _c2:
         st.markdown(
             '<div style="text-align:center;margin:40px 0 8px">'
-            '<span style="font-size:1.9rem;font-weight:800;letter-spacing:-.02em;color:var(--fg)">Veteran\'s Edge</span>'
+            '<span style="font-size:1.9rem;font-weight:800;letter-spacing:-.02em;color:var(--fg)">StockPal</span>'
             '<span class="brand-pro" style="font-size:.7rem">PRO</span></div>'
             '<div style="text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:22px">'
             'AI trading dashboard</div>', unsafe_allow_html=True)
