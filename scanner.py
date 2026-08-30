@@ -164,7 +164,17 @@ ALL_TICKERS = list(dict.fromkeys(t for sec in UNIVERSE.values() for t in sec))
 # ─────────────────────────────────────────────────────────────────────────────
 # CACHE  (single pickle — no metadata file, uses file mtime)
 # ─────────────────────────────────────────────────────────────────────────────
-_CACHE_FILE    = r"C:\TradeCache\.scan_cache.pkl"   # local drive — not synced by OneDrive
+# Scan cache dir: a fast local drive on Windows; the persistent disk on Render
+# (DATA_DIR); a temp dir elsewhere. Created on import so writes never fail.
+import tempfile as _tempfile
+_CACHE_DIR = (os.path.join(os.getenv("DATA_DIR"), "cache") if os.getenv("DATA_DIR")
+              else (r"C:\TradeCache" if os.name == "nt"
+                    else os.path.join(_tempfile.gettempdir(), "stockpal_cache")))
+try:
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+except Exception:
+    pass
+_CACHE_FILE    = os.path.join(_CACHE_DIR, ".scan_cache.pkl")
 _INC_TTL_HRS   = 8    # incremental update after 8 hours
 _FULL_TTL_DAYS = 7    # full re-download after 7 days
 
@@ -226,7 +236,7 @@ def invalidate_cache() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # PRECOMPUTED SCAN RESULT  (daemon writes it, the web app reads it instantly)
 # ─────────────────────────────────────────────────────────────────────────────
-_RESULT_FILE    = r"C:\TradeCache\.scan_result.pkl"
+_RESULT_FILE    = os.path.join(_CACHE_DIR, ".scan_result.pkl")
 _RESULT_VERSION = 1
 
 
