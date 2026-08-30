@@ -26,6 +26,14 @@ from datetime import date, datetime
 from log_setup import setup_logging
 setup_logging()   # configure app-wide logging once (writes to veterans_edge.log)
 
+# One-time cloud data import (Render): pulls accounts/positions from a Secret File
+# onto the persistent disk on first boot. No-op locally and after the first import.
+try:
+    import bootstrap_migrate
+    bootstrap_migrate.run()
+except Exception:
+    pass
+
 st.set_page_config(
     page_title="StockPal",
     page_icon="📈",
