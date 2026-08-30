@@ -1,5 +1,5 @@
 """
-telegram_bot.py — two-way Telegram chatbot for Veteran's Edge
+telegram_bot.py — two-way Telegram chatbot for StockPal
 
 Everything goes through Groq (Llama 3.3 70B).
 Data is fetched based on what the message is asking about,
@@ -814,13 +814,13 @@ def run_bot():
                     auth.set_telegram(user, chat_id)
                     log.info("Telegram linked: %s -> chat %s", user, chat_id)
                     await update.message.reply_text(
-                        "✅ <b>Connected!</b> Your Veteran's Edge alerts will come to this chat.",
+                        "✅ <b>Connected!</b> Your StockPal alerts will come to this chat.",
                         parse_mode="HTML")
                     return
             except Exception as e:
                 log.warning("start-connect failed: %s", e)
         await update.message.reply_text(
-            "👋 Welcome to Veteran's Edge. Open the app → <b>🔔 Telegram Alerts</b> and tap the "
+            "👋 Welcome to StockPal. Open the app → <b>🔔 Telegram Alerts</b> and tap the "
             "connect link there to link your account.", parse_mode="HTML")
 
     loop = asyncio.new_event_loop()

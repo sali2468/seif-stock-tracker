@@ -1,5 +1,5 @@
 """
-Buy / sell signal engine — Veteran's Edge
+Buy / sell signal engine — StockPal
 All thresholds driven by strategy_config.json.
 All output in plain English.
 """

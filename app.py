@@ -1,5 +1,5 @@
 ﻿"""
-Veteran's Edge PRO — Trading Dashboard
+StockPal — Trading Dashboard
 Run: streamlit run app.py
 """
 
@@ -27,7 +27,7 @@ from log_setup import setup_logging
 setup_logging()   # configure app-wide logging once (writes to veterans_edge.log)
 
 st.set_page_config(
-    page_title="TradeTracker PRO",
+    page_title="StockPal",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -1163,7 +1163,7 @@ with st.sidebar:
                     st.success("✅ Connected — your alerts come here.")
                     _tc1, _tc2 = st.columns(2)
                     if _tc1.button("Send test", key="tg_test", use_container_width=True):
-                        _ok = _tgc.send_to(_my_tg, "✅ <b>Veteran's Edge</b> — your alerts are connected!")
+                        _ok = _tgc.send_to(_my_tg, "✅ <b>StockPal</b> — your alerts are connected!")
                         st.toast("📲 Sent — check Telegram!" if _ok else "❌ Failed")
                     if _tc2.button("Disconnect", key="tg_disc", use_container_width=True):
                         _clr_tg(current_user()); st.rerun()

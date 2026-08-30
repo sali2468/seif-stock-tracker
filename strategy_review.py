@@ -1,5 +1,5 @@
 """
-Strategy Review Engine — Veteran's Edge
+Strategy Review Engine — StockPal
 Analyzes your closed trade history against strategy_config.json
 and uses Claude to suggest evidence-based improvements.
 """

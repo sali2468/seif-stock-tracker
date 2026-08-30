@@ -1,5 +1,5 @@
 ﻿"""
-monitor_daemon.py  —  Veteran's Edge background alert daemon
+monitor_daemon.py  —  StockPal background alert daemon
 
 Run this ONCE and leave it running. It checks your positions every 5 minutes
 during market hours and fires Telegram alerts whether the Streamlit app is open
@@ -441,7 +441,7 @@ def _run_checks_once():
 # ── main loop ─────────────────────────────────────────────────────────────────
 def main():
     log.info("=" * 60)
-    log.info("Veteran's Edge — Monitor Daemon + Bot")
+    log.info("StockPal — Monitor Daemon + Bot")
     log.info(f"PID {os.getpid()} | Check interval: {CHECK_INTERVAL_SECS // 60} min")
     log.info(f"Log file: {LOG_FILE}")
     log.info("=" * 60)

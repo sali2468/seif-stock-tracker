@@ -1,5 +1,5 @@
 """
-auth.py — multi-user accounts for Veteran's Edge.
+auth.py — multi-user accounts for StockPal.
 
 • Register username + password (bcrypt-hashed) + email.
 • Login; roles: "admin" (bypasses paywalls, full access) or "user".
@@ -204,7 +204,7 @@ def request_reset(email: str):
     code = secrets.token_hex(3).upper()  # 6-char code
     users[match[0]]["reset"] = {"code": code, "exp": time.time() + 1800}
     _save(users)
-    sent = _send_email(email, "Veteran's Edge — password reset",
+    sent = _send_email(email, "StockPal — password reset",
                        f"Your password reset code is {code}. It expires in 30 minutes.")
     if sent:
         return True, "Reset code emailed to you.", None

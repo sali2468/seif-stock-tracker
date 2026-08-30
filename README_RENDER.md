@@ -1,4 +1,4 @@
-# Deploying Veteran's Edge on Render
+# Deploying StockPal on Render
 
 This runs the app from GitHub at a public URL (and your own domain), with accounts
 that persist — replacing the ngrok tunnel and your laptop having to stay on.
@@ -23,7 +23,7 @@ losing it makes saved broker connections undecryptable.
 cd "C:\Day Trading\render-deploy"
 git init
 git add -A
-git commit -m "Veteran's Edge - Render deploy"
+git commit -m "StockPal - Render deploy"
 git branch -M main
 git remote add origin https://github.com/<you>/<repo>.git
 git push -u origin main
@@ -45,7 +45,7 @@ Open the service → **Environment** tab → fill the values shown blank (`sync:
 Render redeploys automatically.
 
 ## Step 5 — First run + prove data persists
-- Open the Render URL (e.g. `https://veterans-edge.onrender.com`).
+- Open the Render URL (e.g. `https://stockpal.onrender.com`).
 - Register a test account. Then in Render click **Manual Deploy → Deploy latest**
   (or **Restart**). Log back in — the account is still there. That confirms the disk
   is persisting data (the whole point of the paid plan).

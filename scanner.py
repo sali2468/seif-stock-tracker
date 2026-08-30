@@ -1,5 +1,5 @@
 """
-Veteran's Edge — Market Scanner
+StockPal — Market Scanner
 Swing | Day Trade | VCP detection across ~780 tickers.
 
 Cache strategy (single pickle, no metadata files):

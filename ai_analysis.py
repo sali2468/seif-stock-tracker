@@ -1,5 +1,5 @@
 """
-AI-powered stock analysis — Veteran's Edge PRO
+AI-powered stock analysis — StockPal
 Combines live chart indicators + recent news headlines into a plain-English
 recommendation using the Claude API.
 

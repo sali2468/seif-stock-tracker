@@ -1,4 +1,4 @@
-# Veteran's Edge — Task List
+# StockPal — Task List
 
 ---
 

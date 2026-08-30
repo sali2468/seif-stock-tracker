@@ -1,5 +1,5 @@
 """
-Telegram alert sender for Veteran's Edge PRO.
+Telegram alert sender for StockPal.
 Covers: stock alerts, option alerts, daily morning briefing.
 """
 
@@ -477,7 +477,7 @@ def alert_morning_briefing() -> bool:
 
         # ── Header ─────────────────────────────────────────────────────────────
         lines += [
-            f"🌅 <b>Veteran's Edge — Morning Briefing</b>",
+            f"🌅 <b>StockPal — Morning Briefing</b>",
             f"<i>{now.strftime('%A, %B %d %Y')} · {now.strftime('%I:%M %p')}</i>",
             f"━━━━━━━━━━━━━━━━━━━━",
             "",
@@ -661,7 +661,7 @@ def alert_daily_briefing(regime_label: str, regime_desc: str,
                          exit_count: int, raise_count: int) -> bool:
     """Legacy manual briefing — kept for the Dashboard 'Briefing' button."""
     lines = [
-        f"🌅 <b>Veteran's Edge — Daily Briefing</b>",
+        f"🌅 <b>StockPal — Daily Briefing</b>",
         f"━━━━━━━━━━━━━━━━━━━━",
         f"📊 Market: <b>{regime_label}</b>",
         f"<i>{regime_desc}</i>",

@@ -1,4 +1,4 @@
-# Render Blueprint for Veteran's Edge.
+# Render Blueprint for StockPal.
 # Push this repo to GitHub, then in Render: New → Blueprint → pick the repo.
 # Render reads this file and creates the service + disk. Fill the `sync: false`
 # secrets in the dashboard afterwards (they are never committed).
@@ -8,7 +8,7 @@
 
 services:
   - type: web
-    name: veterans-edge
+    name: stockpal
     runtime: python
     plan: starter
     branch: main
@@ -18,7 +18,7 @@ services:
     # Persistent disk — ALL user data lives here (see DATA_DIR below) so it
     # survives restarts and redeploys. This is what keeps accounts safe.
     disk:
-      name: veterans-edge-data
+      name: stockpal-data
       mountPath: /var/data
       sizeGB: 1
 
