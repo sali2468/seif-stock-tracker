@@ -1369,12 +1369,12 @@ def _do_add(ticker, entry, stop, t1, t2, qty, setup_type="swing", **kwargs):
 
 @st.cache_data(ttl=120, show_spinner=False)
 def _entry_reco(ticker: str, entry: float) -> dict:
-    """Fast, deterministic entry recommendation for the Add-Position form.
+    """Entry recommendation for the Add-Position form.
 
-    From the ticker's recent data + the entry price the USER typed, suggests a
-    stop and two targets (ATR + nearest support/resistance) and gives a plain-English
-    verdict on that entry price vs the live price and trend. LONG-ONLY (halal):
-    stop below entry, targets above. No AI call, so it returns instantly.
+    From the entry price the user typed, derives targets from ANALYST PRICE TARGETS
+    + company trajectory (revenue growth), plus an ATR-based protective stop and a
+    plain-English read on the entry vs the live price. LONG-ONLY (halal): stop below
+    entry, targets above. Fundamentals are cached, so it stays snappy.
     """
     try:
         from market_data import get_bars, compute_indicators, get_current_price
@@ -1392,19 +1392,34 @@ def _entry_reco(ticker: str, entry: float) -> dict:
         ema20 = float(last.get("ema20", 0) or 0)
         ema50 = float(last.get("ema50", 0) or 0)
 
-        # Stop: 1.5 ATR below entry, but tightened to just under the nearest recent
-        # support if one sits closer than that (better risk). Targets: ATR-based off
-        # the entry, so they stay sensible even for a limit far from the live price.
+        # Protective stop: 1.5 ATR below entry, tightened to just under the nearest
+        # recent support if one sits closer (better risk).
         win      = df.tail(20)
         atr_stop = entry - 1.5 * atr
         below    = [x for x in win["low"].values if x < entry]
-        if below and max(below) > atr_stop:
-            stop = max(below) * 0.995          # just under nearest support (tighter)
-        else:
-            stop = atr_stop
+        stop = (max(below) * 0.995) if (below and max(below) > atr_stop) else atr_stop
         stop = round(max(stop, 0.01), 2)
-        t1   = round(entry + 2.0 * atr, 2)
-        t2   = round(entry + 3.5 * atr, 2)
+
+        # Targets from ANALYST PRICE TARGETS + company trajectory (what the user
+        # asked for); ATR-based targets are the fallback when there's no coverage.
+        tmean = thigh = None; n_an = 0; rec = "hold"; rev_growth = None
+        try:
+            from fundamentals import get_analyst_targets, get_basic_financials
+            _a = get_analyst_targets(ticker) or {}
+            tmean = _a.get("target_mean"); thigh = _a.get("target_high")
+            n_an  = _a.get("num_analysts", 0) or 0
+            rec   = _a.get("recommendation", "hold")
+            rev_growth = (get_basic_financials(ticker) or {}).get("revenue_growth_yoy")
+        except Exception:
+            pass
+        if tmean and n_an > 0 and tmean > entry:
+            t1 = round(tmean, 2)
+            t2 = round(thigh, 2) if (thigh and thigh > tmean) else round(entry + 3.5 * atr, 2)
+            _tgt_src = "analyst"
+        else:
+            t1 = round(entry + 2.0 * atr, 2)
+            t2 = round(entry + 3.5 * atr, 2)
+            _tgt_src = "atr"
         risk, reward = entry - stop, t1 - entry
         rr   = round(reward / risk, 1) if risk > 0 else 0.0
 
@@ -1420,6 +1435,24 @@ def _entry_reco(ticker: str, entry: float) -> dict:
             verdict = "Fair fill"
             notes.append(f"Your entry ${entry:.2f} is right around the live price ${cur:.2f} — a fair fill.")
 
+        # Analyst price targets + company trajectory — the estimate's basis.
+        if tmean and n_an > 0:
+            up = (tmean - entry) / entry * 100
+            notes.append(f"Wall St ({n_an} analysts): {rec.replace('_', ' ')}, avg target "
+                         f"${tmean:.2f} ({up:+.0f}% from your entry)"
+                         + (f", high ${thigh:.2f}" if thigh and thigh > tmean else "") + ".")
+        else:
+            notes.append("No analyst coverage found — targets fall back to ATR (volatility) off your entry.")
+        # Company trajectory — revenue growth when we have it, else the analyst read.
+        if rev_growth is not None:
+            _traj = "growing" if rev_growth > 8 else "shrinking" if rev_growth < 0 else "roughly flat"
+            notes.append(f"Company trajectory: revenue {_traj} ({rev_growth:+.0f}% YoY).")
+        elif n_an > 0:
+            _traj = ("improving — Wall St is bullish" if rec in ("strong_buy", "buy")
+                     else "under pressure — Wall St is bearish" if rec in ("sell", "strong_sell")
+                     else "steady — Wall St is neutral")
+            notes.append(f"Company trajectory: {_traj}.")
+
         if ema20 and ema50 and entry > ema20 > ema50:
             notes.append("Trend is up (price above the 20- and 50-day averages) — momentum favors the long.")
         elif ema20 and entry < ema20:
@@ -1433,7 +1466,7 @@ def _entry_reco(ticker: str, entry: float) -> dict:
 
         return {"current": round(cur, 2), "atr": round(atr, 2), "rsi": round(rsi),
                 "stop": stop, "target1": t1, "target2": t2, "rr": rr,
-                "verdict": verdict, "notes": notes}
+                "verdict": verdict, "notes": notes, "target_source": _tgt_src}
     except Exception:
         return {}
 
@@ -3291,13 +3324,13 @@ elif page == "💼  Portfolio":
                            "pf_add_t1", "pf_add_t2", "pf_add_notes", "pf_add_reckey"):
                     st.session_state.pop(_k, None)
             st.session_state.setdefault("pf_add_entry", 0.0)
-            st.session_state.setdefault("pf_add_qty", 10.0)
+            st.session_state.setdefault("pf_add_qty", 0.0)
 
             _pfa1, _pfa2, _pfa3 = st.columns([3, 1, 1])
             _pft = _pfa1.text_input("Ticker", placeholder="AAPL", key="pf_add_tkr").upper().strip()
-            _pfe = _pfa2.number_input("Entry $", min_value=0.0, step=0.01, format="%.2f", key="pf_add_entry")
+            _pfe = _pfa2.number_input("Entry Price", min_value=0.0, step=0.01, format="%.2f", key="pf_add_entry")
             _pfq = _pfa3.number_input("Shares", min_value=0.0, step=1.0, format="%.4f", key="pf_add_qty",
-                                      help="Fractional shares are allowed — e.g. 1.5 or 0.25")
+                                      help="Enter the number of shares (fractional allowed — e.g. 1.5 or 0.25)")
 
             # As soon as ticker + entry are set, recommend stop/targets from THAT
             # entry price and pre-fill the fields below (still editable).

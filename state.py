@@ -171,8 +171,36 @@ def add_position(ticker: str, entry: float, stop: float,
     by signal quality later.
     """
     state = _load()
-    state["positions"][ticker.upper()] = {
-        "ticker":         ticker.upper(),
+    tk = ticker.upper()
+
+    # Already hold this ticker? COMBINE rather than overwrite: weighted-average the
+    # entry / stop / targets by share count, sum the shares, and readjust the levels.
+    _existing = state["positions"].get(tk)
+    if _existing:
+        _oq  = float(_existing.get("qty", 0) or 0)
+        _nq  = float(qty or 0)
+        _tot = _oq + _nq
+        if _tot > 0:
+            def _wavg(_old, _new):
+                try:
+                    return round((float(_old) * _oq + float(_new) * _nq) / _tot, 4)
+                except Exception:
+                    return _new
+            _existing["entry"]   = _wavg(_existing.get("entry", entry),     entry)
+            _existing["stop"]    = _wavg(_existing.get("stop", stop),       stop)
+            _existing["target1"] = _wavg(_existing.get("target1", target1), target1)
+            _existing["target2"] = _wavg(_existing.get("target2", target2), target2)
+            _existing["qty"]           = round(_tot, 6)
+            _existing["qty_remaining"] = round(float(_existing.get("qty_remaining", _oq)) + _nq, 6)
+            if notes:
+                _existing["notes"] = (_existing.get("notes", "") + " | " + notes).strip(" |")
+            _existing.setdefault("adds", []).append(
+                {"qty": _nq, "entry": round(float(entry), 4), "date": date.today().isoformat()})
+            _save(state)
+            return
+
+    state["positions"][tk] = {
+        "ticker":         tk,
         "entry":          entry,
         "stop":           stop,
         "target1":        target1,
