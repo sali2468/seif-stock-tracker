@@ -178,6 +178,13 @@ _CACHE_FILE    = os.path.join(_CACHE_DIR, ".scan_cache.pkl")
 _INC_TTL_HRS   = 8    # incremental update after 8 hours
 _FULL_TTL_DAYS = 7    # full re-download after 7 days
 
+# Concurrency / memory knobs. Defaults keep local behavior unchanged; lower them
+# on a constrained host (Render 512MB) via env so a full scan won't OOM. Fewer
+# workers + smaller download chunks = lower peak memory (a bit slower).
+import gc
+SCAN_WORKERS = max(1, int(os.getenv("SCAN_WORKERS", "4")))
+SCAN_CHUNK   = max(20, int(os.getenv("SCAN_CHUNK", "300")))
+
 
 def cache_info() -> dict:
     """Cache status for the UI label."""
@@ -344,7 +351,7 @@ def _download_chunk(tickers: list, period: str = "1y") -> Dict[str, pd.DataFrame
         try:
             df = raw.copy()
             df.columns = [str(c).lower() for c in df.columns]
-            df = df[["open", "high", "low", "close", "volume"]].dropna()
+            df = df[["open", "high", "low", "close", "volume"]].dropna().astype("float32")
             if len(df) >= 60:
                 result[tickers[0]] = df
         except Exception:
@@ -366,7 +373,7 @@ def _download_chunk(tickers: list, period: str = "1y") -> Dict[str, pd.DataFrame
             try:
                 df = raw[ticker].copy()
                 df.columns = [str(c).lower() for c in df.columns]
-                df = df[["open", "high", "low", "close", "volume"]].dropna()
+                df = df[["open", "high", "low", "close", "volume"]].dropna().astype("float32")
                 if len(df) >= 60:
                     result[ticker] = df
             except Exception:
@@ -377,17 +384,20 @@ def _download_chunk(tickers: list, period: str = "1y") -> Dict[str, pd.DataFrame
     return result
 
 
-def _download_parallel(tickers: list, period: str = "1y", chunk_size: int = 300) -> Dict[str, pd.DataFrame]:
-    """Split tickers into chunks and download concurrently."""
+def _download_parallel(tickers: list, period: str = "1y", chunk_size: int = None) -> Dict[str, pd.DataFrame]:
+    """Split tickers into chunks and download concurrently. Chunk size + worker
+    count are capped by SCAN_CHUNK / SCAN_WORKERS to keep peak memory in budget."""
+    chunk_size = chunk_size or SCAN_CHUNK
     chunks = [tickers[i: i + chunk_size] for i in range(0, len(tickers), chunk_size)]
     result: Dict[str, pd.DataFrame] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(chunks), 4)) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(chunks), SCAN_WORKERS)) as ex:
         futs = [ex.submit(_download_chunk, chunk, period) for chunk in chunks]
         for fut in concurrent.futures.as_completed(futs):
             try:
                 result.update(fut.result())
             except Exception:
                 pass
+    gc.collect()   # release the transient yfinance frames promptly
     return result
 
 
@@ -1271,12 +1281,13 @@ def run_daily_scan(
     chunk_size = max(1, n // 4)
     chunks = [tickers_to_score[i: i + chunk_size] for i in range(0, n, chunk_size)]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=SCAN_WORKERS) as ex:
         for sw_l, dt_l, vcp_l, mr_l in ex.map(_score_chunk, chunks):
             swing_signals.extend(sw_l)
             day_signals.extend(dt_l)
             vcp_signals.extend(vcp_l)
             momentum_signals.extend(mr_l)
+    gc.collect()   # release the per-ticker indicator frames built during scoring
 
     # ── 6. Sort ───────────────────────────────────────────────────────────────
     def swing_key(s):

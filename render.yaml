@@ -28,6 +28,12 @@ services:
         value: /var/data
       - key: PYTHON_VERSION
         value: 3.12.10
+      # Keep the scanner within the 512MB Starter RAM (fewer workers + smaller
+      # download chunks = lower peak memory). Raise these if you upsize the instance.
+      - key: SCAN_WORKERS
+        value: "2"
+      - key: SCAN_CHUNK
+        value: "100"
 
       # ── Secrets — set these in the Render dashboard (Environment tab) ────────
       - key: ADMIN_USER            # your admin username, e.g. seif2468
