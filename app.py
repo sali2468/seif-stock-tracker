@@ -34,6 +34,15 @@ try:
 except Exception:
     pass
 
+# Cloud scan precompute: one background scan on a timer serves every user, so
+# nobody triggers a live 780-ticker scan (concurrency + 512MB memory win). Runs
+# only when RUN_SCAN_WORKER is set (Render); no-op locally where the daemon does it.
+try:
+    import background_worker
+    background_worker.start()
+except Exception:
+    pass
+
 st.set_page_config(
     page_title="StockPal",
     page_icon="📈",

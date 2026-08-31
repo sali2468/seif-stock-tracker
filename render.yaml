@@ -34,6 +34,10 @@ services:
         value: "2"
       - key: SCAN_CHUNK
         value: "100"
+      # Run the in-process scan precompute thread (one scan on a timer for all
+      # users, so nobody triggers a live scan). Web service only.
+      - key: RUN_SCAN_WORKER
+        value: "1"
 
       # ── Secrets — set these in the Render dashboard (Environment tab) ────────
       - key: ADMIN_USER            # your admin username, e.g. seif2468
