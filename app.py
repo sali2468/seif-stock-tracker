@@ -1367,18 +1367,18 @@ def _do_add(ticker, entry, stop, t1, t2, qty, setup_type="swing", **kwargs):
     _refresh()
 
 
-@st.cache_data(ttl=120, show_spinner=False)
-def _entry_reco(ticker: str, entry: float) -> dict:
-    """Entry recommendation for the Add-Position form.
+@st.cache_data(ttl=300, show_spinner=False)
+def _entry_reco(ticker: str, entry: float, horizon: str = "Short-term") -> dict:
+    """Entry recommendation for the Add-Position form, tuned to the chosen horizon.
 
-    From the entry price the user typed, derives targets from ANALYST PRICE TARGETS
-    + company trajectory (revenue growth), plus an ATR-based protective stop and a
-    plain-English read on the entry vs the live price. LONG-ONLY (halal): stop below
-    entry, targets above. Fundamentals are cached, so it stays snappy.
+      Day Trade  → quick intraday targets (~1–2 ATR), tight stop.
+      Short-term → swing targets (days–weeks, ~2–3.5 ATR), standard stop.
+      Long-term  → ANALYST PRICE TARGETS (mean/high), wider stop.
+
+    LONG-ONLY (halal): stop below entry, targets above. Fundamentals are cached.
     """
     try:
         from market_data import get_bars, compute_indicators, get_current_price
-        import numpy as _np
         df = get_bars(ticker, "6mo", "1d")
         if df is None or len(df) < 30 or entry <= 0:
             return {}
@@ -1389,84 +1389,79 @@ def _entry_reco(ticker: str, entry: float) -> dict:
             return {}
         cur   = get_current_price(ticker) or float(last["close"])
         rsi   = float(last.get("rsi", 50) or 50)
-        ema20 = float(last.get("ema20", 0) or 0)
-        ema50 = float(last.get("ema50", 0) or 0)
 
-        # Protective stop: 1.5 ATR below entry, tightened to just under the nearest
-        # recent support if one sits closer (better risk).
+        # Per-horizon ATR multiples for the stop + targets.
+        _plan = {
+            "Day Trade":  {"stop": 0.75, "t1": 1.0, "t2": 2.0},
+            "Short-term": {"stop": 1.5,  "t1": 2.0, "t2": 3.5},
+            "Long-term":  {"stop": 2.0,  "t1": 4.0, "t2": 7.0},
+        }.get(horizon, {"stop": 1.5, "t1": 2.0, "t2": 3.5})
+
+        # Stop: ATR-based (per horizon), tightened to just under the nearest support.
         win      = df.tail(20)
-        atr_stop = entry - 1.5 * atr
+        atr_stop = entry - _plan["stop"] * atr
         below    = [x for x in win["low"].values if x < entry]
         stop = (max(below) * 0.995) if (below and max(below) > atr_stop) else atr_stop
         stop = round(max(stop, 0.01), 2)
 
-        # Targets from ANALYST PRICE TARGETS + company trajectory (what the user
-        # asked for); ATR-based targets are the fallback when there's no coverage.
-        tmean = thigh = None; n_an = 0; rec = "hold"; rev_growth = None
+        # Analyst price targets (cached): drive Long-term targets, shown as context otherwise.
+        tmean = thigh = None; n_an = 0; rec = "hold"
         try:
-            from fundamentals import get_analyst_targets, get_basic_financials
+            from fundamentals import get_analyst_targets
             _a = get_analyst_targets(ticker) or {}
             tmean = _a.get("target_mean"); thigh = _a.get("target_high")
             n_an  = _a.get("num_analysts", 0) or 0
             rec   = _a.get("recommendation", "hold")
-            rev_growth = (get_basic_financials(ticker) or {}).get("revenue_growth_yoy")
         except Exception:
             pass
-        if tmean and n_an > 0 and tmean > entry:
+
+        if horizon == "Long-term" and tmean and n_an > 0 and tmean > entry:
             t1 = round(tmean, 2)
-            t2 = round(thigh, 2) if (thigh and thigh > tmean) else round(entry + 3.5 * atr, 2)
+            t2 = round(thigh, 2) if (thigh and thigh > tmean) else round(entry + _plan["t2"] * atr, 2)
             _tgt_src = "analyst"
         else:
-            t1 = round(entry + 2.0 * atr, 2)
-            t2 = round(entry + 3.5 * atr, 2)
+            t1 = round(entry + _plan["t1"] * atr, 2)
+            t2 = round(entry + _plan["t2"] * atr, 2)
             _tgt_src = "atr"
         risk, reward = entry - stop, t1 - entry
         rr   = round(reward / risk, 1) if risk > 0 else 0.0
 
         gap = (entry - cur) / cur * 100 if cur else 0.0
         notes = []
+        _desc = {"Day Trade":  "quick intraday targets (~1–2 ATR) with a tight stop",
+                 "Short-term": "swing targets (days–weeks, ~2–3.5 ATR)",
+                 "Long-term":  "position targets (weeks–months) from analyst price targets"}.get(horizon, "")
+        notes.append(f"{horizon} plan — {_desc}.")
         if gap > 2:
             verdict = "Chasing"
-            notes.append(f"Your entry ${entry:.2f} is {gap:.1f}% ABOVE the live price ${cur:.2f} — you'd be paying up. Consider a limit order nearer ${cur:.2f}.")
+            notes.append(f"Your entry ${entry:.2f} is {gap:.1f}% ABOVE the live price ${cur:.2f} — consider a limit nearer ${cur:.2f}.")
         elif gap < -2:
             verdict = "Patient"
-            notes.append(f"Your entry ${entry:.2f} is {abs(gap):.1f}% BELOW the live price ${cur:.2f} — a patient limit; it only fills if price dips to you.")
+            notes.append(f"Your entry ${entry:.2f} is {abs(gap):.1f}% BELOW the live price ${cur:.2f} — a patient limit; it fills only on a dip.")
         else:
             verdict = "Fair fill"
             notes.append(f"Your entry ${entry:.2f} is right around the live price ${cur:.2f} — a fair fill.")
 
-        # Analyst price targets + company trajectory — the estimate's basis.
+        # Analyst read — the basis for Long-term targets; context for the shorter plans.
         if tmean and n_an > 0:
             up = (tmean - entry) / entry * 100
-            notes.append(f"Wall St ({n_an} analysts): {rec.replace('_', ' ')}, avg target "
-                         f"${tmean:.2f} ({up:+.0f}% from your entry)"
-                         + (f", high ${thigh:.2f}" if thigh and thigh > tmean else "") + ".")
-        else:
-            notes.append("No analyst coverage found — targets fall back to ATR (volatility) off your entry.")
-        # Company trajectory — revenue growth when we have it, else the analyst read.
-        if rev_growth is not None:
-            _traj = "growing" if rev_growth > 8 else "shrinking" if rev_growth < 0 else "roughly flat"
-            notes.append(f"Company trajectory: revenue {_traj} ({rev_growth:+.0f}% YoY).")
-        elif n_an > 0:
-            _traj = ("improving — Wall St is bullish" if rec in ("strong_buy", "buy")
-                     else "under pressure — Wall St is bearish" if rec in ("sell", "strong_sell")
-                     else "steady — Wall St is neutral")
-            notes.append(f"Company trajectory: {_traj}.")
-
-        if ema20 and ema50 and entry > ema20 > ema50:
-            notes.append("Trend is up (price above the 20- and 50-day averages) — momentum favors the long.")
-        elif ema20 and entry < ema20:
-            notes.append("Price is below its 20-day average — trend is weak here; keep the stop tight.")
+            _lead = "Targets from Wall St" if _tgt_src == "analyst" else "For context, Wall St"
+            notes.append(f"{_lead} ({n_an} analysts): {rec.replace('_', ' ')}, avg target ${tmean:.2f} "
+                         f"({up:+.0f}% from your entry)"
+                         + (f", high ${thigh:.2f}" if thigh and thigh > (tmean or 0) else "") + ".")
+        elif horizon == "Long-term":
+            notes.append("No analyst coverage — Long-term targets fall back to ATR off your entry.")
         if rsi >= 70:
             notes.append(f"RSI {rsi:.0f} is overbought — entering here risks a snapback.")
         elif rsi <= 35:
-            notes.append(f"RSI {rsi:.0f} is oversold — a bounce entry; confirm it's actually turning up.")
+            notes.append(f"RSI {rsi:.0f} is oversold — confirm it's actually turning up.")
         if 0 < rr < 1.5:
-            notes.append(f"Risk:reward is only {rr}:1 at this entry — thin. A lower entry or nearer target improves it.")
+            notes.append(f"Risk:reward is only {rr}:1 at this entry — thin.")
 
         return {"current": round(cur, 2), "atr": round(atr, 2), "rsi": round(rsi),
                 "stop": stop, "target1": t1, "target2": t2, "rr": rr,
-                "verdict": verdict, "notes": notes, "target_source": _tgt_src}
+                "verdict": verdict, "notes": notes, "target_source": _tgt_src,
+                "horizon": horizon}
     except Exception:
         return {}
 
@@ -3332,13 +3327,21 @@ elif page == "💼  Portfolio":
             _pfq = _pfa3.number_input("Shares", min_value=0.0, step=1.0, format="%.4f", key="pf_add_qty",
                                       help="Enter the number of shares (fractional allowed — e.g. 1.5 or 0.25)")
 
-            # As soon as ticker + entry are set, recommend stop/targets from THAT
-            # entry price and pre-fill the fields below (still editable).
+            # Pick the target horizon — it drives the suggested stop + targets below.
+            _horizon = st.radio(
+                "Target horizon", ["Day Trade", "Short-term", "Long-term"],
+                index=1, horizontal=True, key="pf_add_horizon",
+                help="Day Trade = quick intraday targets · Short-term = swing (days–weeks) "
+                     "· Long-term = analyst price targets (weeks–months)")
+
+            # With ticker + entry + horizon set, recommend a stop/targets for that plan
+            # and pre-fill the fields below (still editable).
             _rec = {}
             if _pft and _pfe > 0:
-                _rec = _entry_reco(_pft, float(_pfe)) or {}
-                if _rec and st.session_state.get("pf_add_reckey") != f"{_pft}:{_pfe:.2f}":
-                    st.session_state["pf_add_reckey"] = f"{_pft}:{_pfe:.2f}"
+                _rec = _entry_reco(_pft, float(_pfe), _horizon) or {}
+                _rk = f"{_pft}:{_pfe:.2f}:{_horizon}"
+                if _rec and st.session_state.get("pf_add_reckey") != _rk:
+                    st.session_state["pf_add_reckey"] = _rk
                     st.session_state["pf_add_stop"] = _rec["stop"]
                     st.session_state["pf_add_t1"]   = _rec["target1"]
                     st.session_state["pf_add_t2"]   = _rec["target2"]
@@ -3351,7 +3354,7 @@ elif page == "💼  Portfolio":
                     f'<div style="border:1px solid var(--border);border-radius:10px;'
                     f'padding:12px 14px;margin:8px 0 12px;background:var(--surface)">'
                     f'<div style="font-size:.72rem;letter-spacing:.5px;color:var(--dim);'
-                    f'text-transform:uppercase;margin-bottom:7px">Recommendation from your entry '
+                    f'text-transform:uppercase;margin-bottom:7px">{_rec.get("horizon","")} plan '
                     f'<span style="color:{_vcol};font-weight:800">· {_rec["verdict"]}</span></div>'
                     f'<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:.9rem;margin-bottom:9px">'
                     f'<span style="color:var(--muted)">Live <b style="color:var(--fg)">${_rec["current"]:.2f}</b></span>'
