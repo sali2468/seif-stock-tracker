@@ -13,6 +13,8 @@ import re
 import numpy as np
 from typing import Optional
 
+from ai_style import PLAIN_LANGUAGE_RULE
+
 # Read the module-level snapshot for reference, but the functions below read the
 # env at CALL time so key availability doesn't depend on import order vs load_dotenv.
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -249,6 +251,8 @@ Days held: {p['days_held']}
     prompt = f"""You are a professional swing trader and market analyst with 20 years of experience.
 Analyze {ticker} and give a clear, direct, honest recommendation. Do not hedge. Be specific.
 
+{PLAIN_LANGUAGE_RULE}
+
 This is a LONG-ONLY account: we only ever buy stock we expect to rise. Never recommend
 short-selling, put options, inverse/bearish products, or any position that profits from a
 decline. "SELL" means exit an existing holding (or, if the person is flat, stay out / avoid) —
@@ -398,6 +402,8 @@ P/E ratio: {fins.get('pe_ratio','—')}
 A scanner flagged {ticker} as a potential buy. Your job: decide if a trader should ENTER this trade right now, WAIT for a better entry, or PASS entirely.
 This is a LONG-ONLY account — the only trade is buying to open. Never suggest short-selling, puts, or profiting from a decline; if the setup is weak, the answer is WAIT or PASS.
 
+{PLAIN_LANGUAGE_RULE}
+
 === COMPANY ===
 {co_name} | {co_sector}
 {co_desc[:250] if co_desc else "(no description)"}
@@ -518,6 +524,8 @@ Profit margin: {str(round(fi.get('profit_margin',0)*100,1))+'%' if fi.get('profi
     prompt = f"""You are a professional swing trader and position manager with 20 years of experience.
 The trader currently holds {ticker} and needs your honest recommendation on what to do with this position RIGHT NOW.
 This is a LONG-ONLY account — the trader owns shares. Recommendations only cover managing or exiting this long (hold, trim, tighten stop, exit). Never suggest shorting, puts, or adding a bearish/inverse position.
+
+{PLAIN_LANGUAGE_RULE}
 
 === COMPANY ===
 {co_name} | {co_sector}

@@ -1873,6 +1873,17 @@ if page == "🏠  Dashboard":
 
     # ── Today's Picks ─────────────────────────────────────────────────────────
     st.markdown("---")
+    # Is a recent scan available at all? If not, the scanner (or the background
+    # worker) is still building today's list — show a "scoring…" state instead of a
+    # discouraging "nothing found", which reads wrong while the picks are still loading.
+    try:
+        from scanner import load_scan_result as _lsr_ready
+        _scan_ready = _lsr_ready(max_age_s=6 * 3600) is not None
+    except Exception:
+        _scan_ready = False
+    _scoring_msg = ("⏳ Scoring today's picks… the scanner is still building the latest list. "
+                    "This updates automatically — check back in a moment.")
+
     # ── Today's Reversals — the app's focus: buy the bottom, sell the highs ────
     try:
         from scanner import load_scan_result as _lsr
@@ -1883,7 +1894,8 @@ if page == "🏠  Dashboard":
     st.markdown('<div style="font-size:1.1rem;font-weight:700;color:var(--fg);margin-bottom:2px">🔄 Today\'s Reversals</div>', unsafe_allow_html=True)
     st.markdown('<div style="color:var(--dim);font-size:.82rem;margin-bottom:12px">Bottoms & turnarounds — buy the low, sell into resistance</div>', unsafe_allow_html=True)
     if not _rev_sigs:
-        st.caption("No reversal setups from the last scan — open 📡 Scanner → Reversals for the full list.")
+        st.caption(_scoring_msg if not _scan_ready
+                   else "No reversal setups from the last scan — open 📡 Scanner → Reversals for the full list.")
     else:
         for _rs in _rev_sigs:
             _rco = cached_company_info(_rs.ticker)
@@ -1956,7 +1968,10 @@ if page == "🏠  Dashboard":
                 st.error(f"❌ Briefing error: {_be}")
 
         if not signals:
-            st.warning("No clean buy signals right now. Market may be extended — check back after the next refresh.")
+            if not _scan_ready:
+                st.info(_scoring_msg)
+            else:
+                st.warning("No clean buy signals right now. Market may be extended — check back after the next refresh.")
         else:
             _db_buys, _db_watches = [], []
             for _s in signals:
