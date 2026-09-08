@@ -158,29 +158,35 @@ def _iframe_head_css() -> str:
             ":root{" + "".join(f"--{k}:{v};" for k, v in t.items()) + "}")
 
 
+@st.cache_data(ttl=15, show_spinner=False)
+def _market_bar_seed() -> tuple:
+    """Cached seed (SPY/QQQ/IWM + VIX) for the market bar. The bar streams live
+    prices over a websocket after it loads, so this only needs to be roughly fresh
+    — caching it stops every page rerun from making a fresh Finnhub + VIX call."""
+    _tk = ["SPY", "QQQ", "IWM"]
+    try:
+        _q = get_batch_quotes(_tk)
+        _seed = {t: {"price": _q.get(t, {}).get("price", 0),
+                     "pct":   _q.get(t, {}).get("pct", 0)} for t in _tk}
+    except Exception:
+        _seed = {t: {"price": 0, "pct": 0} for t in _tk}
+    _vix = 0.0
+    try:
+        from market_data import get_vix
+        _vix = get_vix()
+    except Exception:
+        pass
+    return _seed, _vix
+
+
 def live_market_bar():
     """Top-of-page market pulse: SPY QQQ IWM + VIX. Updates on every trade tick."""
     import json as _json, os as _os
     api_key = _os.getenv("FINNHUB_API_KEY", "")
 
-    # Seed values from Finnhub REST so something shows before first WS tick
-    market_tickers = ["SPY", "QQQ", "IWM"]
-    seed = {}
-    try:
-        quotes = get_batch_quotes(market_tickers)
-        for t in market_tickers:
-            q = quotes.get(t, {})
-            seed[t] = {"price": q.get("price", 0), "pct": q.get("pct", 0)}
-    except Exception:
-        for t in market_tickers:
-            seed[t] = {"price": 0, "pct": 0}
-
-    vix_val = 0.0
-    try:
-        from market_data import get_vix
-        vix_val = get_vix()
-    except Exception:
-        pass
+    # Seed values (cached ~15 s) so something shows before the first WS tick — the
+    # websocket below streams live prices, so the seed only needs to be roughly fresh.
+    seed, vix_val = _market_bar_seed()
 
     seed_json = _json.dumps(seed)
 
@@ -1929,33 +1935,40 @@ if page == "🏠  Dashboard":
     else:
         open_tickers  = list(positions.keys())
 
-        # Fast: reuse the daily scan's already-scored swing setups instead of
-        # re-scoring the whole watchlist live, then re-rank with the multi-factor
-        # swing engine so this preview matches the 🌟 Swing Picks tab.
-        try:
-            from scanner import load_scan_result as _lsr_sw
-            _cached_sw = _lsr_sw(max_age_s=6 * 3600)
-            signals = [s for s in (_cached_sw[1] if _cached_sw else []) if s.ticker not in open_tickers]
-        except Exception:
-            signals = []
-
-        if signals:
+        # Enriching swing picks calls the swing engine (a Finnhub lookup per ticker),
+        # so cache the ranked result for 60 s in session — otherwise up to 15 network
+        # calls fire on EVERY rerun of the dashboard. The 🔄 Refresh button clears it.
+        if not _ssc_fresh("db_swing", 60):
+            # Fast: reuse the daily scan's already-scored swing setups instead of
+            # re-scoring the whole watchlist live, then re-rank with the multi-factor
+            # swing engine so this preview matches the 🌟 Swing Picks tab.
             try:
-                from swing_engine import score_swing
-                _reg_e = regime["regime"] if isinstance(regime, dict) else str(regime)
-                signals = signals[:15]   # enrich only the top handful (bounds Finnhub calls)
-                for _sig in signals:
-                    try:
-                        _tech = {1: 55, 2: 70, 3: 85}.get(int(getattr(_sig, "stars", 2) or 2), 65)
-                        _er = score_swing(_sig.ticker, _tech, getattr(_sig, "why_buy", ""), _reg_e)
-                        _sig.stars = _er["stars"]
-                        _sig._eng_score = _er["score"]
-                    except Exception:
-                        pass
+                from scanner import load_scan_result as _lsr_sw
+                _cached_sw = _lsr_sw(max_age_s=6 * 3600)
+                _sw_list = [s for s in (_cached_sw[1] if _cached_sw else []) if s.ticker not in open_tickers]
             except Exception:
-                pass
+                _sw_list = []
 
-        signals.sort(key=lambda x: (getattr(x, "_eng_score", 0), x.stars), reverse=True)
+            if _sw_list:
+                try:
+                    from swing_engine import score_swing
+                    _reg_e = regime["regime"] if isinstance(regime, dict) else str(regime)
+                    _sw_list = _sw_list[:15]   # enrich only the top handful (bounds Finnhub calls)
+                    for _sig in _sw_list:
+                        try:
+                            _tech = {1: 55, 2: 70, 3: 85}.get(int(getattr(_sig, "stars", 2) or 2), 65)
+                            _er = score_swing(_sig.ticker, _tech, getattr(_sig, "why_buy", ""), _reg_e)
+                            _sig.stars = _er["stars"]
+                            _sig._eng_score = _er["score"]
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            _sw_list.sort(key=lambda x: (getattr(x, "_eng_score", 0), x.stars), reverse=True)
+            _ssc_set("db_swing", _sw_list)
+
+        signals = _ssc_get("db_swing") or []
 
         if st.session_state.pop("_send_briefing", False):
             try:
