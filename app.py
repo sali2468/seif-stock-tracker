@@ -187,6 +187,7 @@ def live_market_bar():
     # Seed values (cached ~15 s) so something shows before the first WS tick — the
     # websocket below streams live prices, so the seed only needs to be roughly fresh.
     seed, vix_val = _market_bar_seed()
+    market_tickers = ["SPY", "QQQ", "IWM"]
 
     seed_json = _json.dumps(seed)
 
