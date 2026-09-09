@@ -2487,6 +2487,7 @@ elif page == "📡  Scanner":
     def _render_swing_card(_p, _tr, _keyns):
         # Matches the Day Trades card exactly (spacing / font sizes / button layout).
         _tk = _p["ticker"]
+        _sc_rec = _get_reco(_tk, st.session_state.get("sp_horizon", "Short-term Swing"), position=get_positions().get(_tk))
         _stars_txt = "⭐" * int(_p["stars"])
         _sc = "#fbbf24" if _p["stars"] == 3 else "var(--muted)" if _p["stars"] == 2 else "#b45309"
         _co = cached_company_info(_tk)
@@ -2496,15 +2497,15 @@ elif page == "📡  Scanner":
         _lcol = "var(--pos)" if _lpct >= 0 else "var(--neg)"
         _licon = "▲" if _lpct >= 0 else "▼"
         _rz = " · ".join(_p["reasons"][:4]) or _tr.get("why") or "meets the setup criteria"
-        _sp = f'&nbsp;<span style="color:var(--faint)">({_tr["stop_pct"]}%)</span>' if _tr.get("stop_pct") not in (None, "") else ""
-        _gp = f'&nbsp;<span style="color:var(--faint)">(+{_tr["gain_pct"]}%)</span>' if _tr.get("gain_pct") not in (None, "") else ""
+        # Levels come from the unified reco (style-tuned) so the card matches the
+        # recommendation shown below it — no contradiction between them.
         _levels = ""
-        if _tr.get("entry") and _tr.get("stop") and _tr.get("target"):
+        if _sc_rec and not _sc_rec.get("error"):
             _levels = (
                 f'<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">'
-                f'<span style="font-size:.85rem"><span style="color:var(--faint)">Entry</span>&nbsp;<b style="color:var(--fg)">${_tr["entry"]:.2f}</b></span>'
-                f'<span style="font-size:.85rem"><span style="color:var(--faint)">Stop</span>&nbsp;<b style="color:var(--neg)">${_tr["stop"]:.2f}</b>{_sp}</span>'
-                f'<span style="font-size:.85rem"><span style="color:var(--faint)">Target</span>&nbsp;<b style="color:var(--pos)">${_tr["target"]:.2f}</b>{_gp}</span>'
+                f'<span style="font-size:.85rem"><span style="color:var(--faint)">Now</span>&nbsp;<b style="color:var(--fg)">${_sc_rec.get("current",0):.2f}</b></span>'
+                f'<span style="font-size:.85rem"><span style="color:var(--faint)">Stop</span>&nbsp;<b style="color:var(--neg)">${_sc_rec.get("stop",0):.2f}</b></span>'
+                f'<span style="font-size:.85rem"><span style="color:var(--faint)">Target</span>&nbsp;<b style="color:var(--pos)">${_sc_rec.get("target1",0):.2f}</b></span>'
                 f'</div>')
         _facts = "".join(f'<span class="pill">{_k} {_v}</span>' for _k, _v in _p["factors"].items())
         st.markdown(
@@ -2526,9 +2527,9 @@ elif page == "📡  Scanner":
         _dc1.caption(f"{_tr.get('kind','Swing')} setup — swing hold, manage to your plan.")
         _dc2.markdown("<br>", unsafe_allow_html=True)
         if _dc2.button("➕ Track", key=f"{_keyns}_trk_{_tk}", use_container_width=True):
-            _do_add(_tk, _tr.get("entry") or _lp, _tr.get("stop", 0), _tr.get("target", 0),
-                    _tr.get("target", 0), 1, setup_type="swing", stars=int(_p["stars"]),
-                    sector=_tr.get("sector", ""))
+            _do_add(_tk, _sc_rec.get("current") or _lp, _sc_rec.get("stop", 0),
+                    _sc_rec.get("target1", 0), _sc_rec.get("target2", 0), 1,
+                    setup_type="swing", stars=int(_p["stars"]), sector=_tr.get("sector", ""))
         _dc3.markdown("<br>", unsafe_allow_html=True)
         if TOKEN and CHAT_ID:
             if _dc3.button("📲", key=f"{_keyns}_snd_{_tk}", use_container_width=True, help="Send to Telegram"):
@@ -2540,6 +2541,7 @@ elif page == "📡  Scanner":
                 st.toast("📲 Sent!" if _send(_msg) else "❌ Failed")
         if st.button("🔎 Deep Dive — full Analyze", key=f"{_keyns}_dd_{_tk}", use_container_width=True):
             _goto_analyze(_tk)
+        _render_reco(_sc_rec, key_ns=f"scr_{_keyns}_{_tk}", compact=True)
 
     with tab_swing:
         st.caption("The best swing candidates from every setup — reversals, pullbacks, and swing bases — "
@@ -2980,6 +2982,7 @@ elif page == "📡  Scanner":
                 sc_  = "#fbbf24" if sig.stars==3 else "var(--muted)" if sig.stars==2 else "#b45309"
                 gs_  = f"Gap {sig.gap_pct:+.1f}%" if abs(sig.gap_pct) >= 0.5 else ""
                 co   = cached_company_info(sig.ticker)
+                _dt_rec = _get_reco(sig.ticker, st.session_state.get("sp_horizon", "Short-term Swing"), position=get_positions().get(sig.ticker))
                 _dlq  = _live_quotes.get(sig.ticker, {})
                 _dlive_p   = _dlq.get("price") or sig.price
                 _dlive_pct = _dlq.get("pct") or 0.0
@@ -3003,9 +3006,9 @@ elif page == "📡  Scanner":
                         f'</div>'
                         f'<p style="color:var(--fg);font-size:.92rem;line-height:1.72;margin:0 0 14px">{sig.why}</p>'
                         f'<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">'
-                        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Entry</span>&nbsp;<b style="color:var(--fg)">${sig.entry:.2f}</b></span>'
-                        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Stop</span>&nbsp;<b style="color:var(--neg)">${sig.stop:.2f}</b>&nbsp;<span style="color:var(--faint)">({sig.stop_pct}%)</span></span>'
-                        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Target</span>&nbsp;<b style="color:var(--pos)">${sig.target:.2f}</b>&nbsp;<span style="color:var(--faint)">(+{sig.gain_pct}%)</span></span>'
+                        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Now</span>&nbsp;<b style="color:var(--fg)">${(_dt_rec.get("current") or sig.entry):.2f}</b></span>'
+                        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Stop</span>&nbsp;<b style="color:var(--neg)">${(_dt_rec.get("stop") or sig.stop):.2f}</b></span>'
+                        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Target</span>&nbsp;<b style="color:var(--pos)">${(_dt_rec.get("target1") or sig.target):.2f}</b></span>'
                         f'</div>'
                         f'</div>',
                         unsafe_allow_html=True,
@@ -3015,7 +3018,8 @@ elif page == "📡  Scanner":
                     dc1.caption("Day trade only — enter near open, exit before close.")
                     dc2.markdown("<br>", unsafe_allow_html=True)
                     if dc2.button("➕ Track", key=f"dt_a_{sig.ticker}", use_container_width=True):
-                        _do_add(sig.ticker, sig.entry, sig.stop, sig.target, sig.target, 1,
+                        _do_add(sig.ticker, (_dt_rec.get("current") or sig.entry), (_dt_rec.get("stop") or sig.stop),
+                                (_dt_rec.get("target1") or sig.target), (_dt_rec.get("target2") or sig.target), 1,
                                 setup_type="day", stars=sig.stars, sector=getattr(sig, "sector", ""))
                     dc3.markdown("<br>", unsafe_allow_html=True)
                     if TOKEN and CHAT_ID:
@@ -3034,6 +3038,8 @@ elif page == "📡  Scanner":
                             )
                             ok = _send(msg)
                             st.toast("📲 Sent!" if ok else "❌ Failed")
+
+                    _render_reco(_dt_rec, key_ns=f"scdt_{sig.ticker}", compact=True)
 
                     # ── Deep Dive toggle (day trade) ──────────────────────────
                     _ddt_key  = f"dive_dt_{sig.ticker}_sw"
