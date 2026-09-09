@@ -1473,6 +1473,124 @@ def _entry_reco(ticker: str, entry: float, horizon: str = "Short-term") -> dict:
         return {}
 
 
+# ── Unified recommendation UI (single source of truth = reco.recommend) ───────
+_RECO_STYLE = {
+    "BUY":      ("var(--pos)", "rgba(34,197,94,.12)",  "rgba(34,197,94,.35)",  "🟢"),
+    "BUY_MORE": ("var(--pos)", "rgba(34,197,94,.12)",  "rgba(34,197,94,.35)",  "➕"),
+    "HOLD":     ("#f59e0b",    "rgba(245,158,11,.12)", "rgba(245,158,11,.35)", "✋"),
+    "WAIT":     ("#f59e0b",    "rgba(245,158,11,.12)", "rgba(245,158,11,.35)", "⏳"),
+    "SELL":     ("var(--neg)", "rgba(239,68,68,.12)",  "rgba(239,68,68,.35)",  "🔴"),
+    "AVOID":    ("var(--neg)", "rgba(239,68,68,.12)",  "rgba(239,68,68,.35)",  "🚫"),
+}
+
+
+def _horizon_picker(label: str = "📅 Trading style") -> str:
+    """One shared trading-style selector. Every page uses the SAME session key so
+    the choice — and therefore the advice — stays in sync app-wide (no contradictions)."""
+    import reco as _reco
+    if st.session_state.get("sp_horizon") not in _reco.HORIZONS:
+        st.session_state["sp_horizon"] = _reco.DEFAULT_HORIZON
+    return st.radio(
+        label, _reco.HORIZONS, key="sp_horizon", horizontal=True,
+        help="Day Trading = minutes–hours · Short-term Swing = days–weeks · "
+             "Long-term Swing = weeks–months. This drives the buy / hold / sell advice.",
+    )
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _reco_cached(ticker: str, horizon: str, pos_key: str, position: dict | None, name: str):
+    """Cache the (network-heavy) recommendation for 120s. pos_key busts the cache
+    when the held position's entry/stop change."""
+    import reco as _reco
+    return _reco.recommend(ticker, horizon, position=position, company_name=name)
+
+
+def _get_reco(ticker: str, horizon: str, position: dict | None = None) -> dict:
+    _pk = ""
+    if position:
+        _pk = f"{position.get('entry')}:{position.get('stop')}:{position.get('target1')}"
+    try:
+        _name = cached_company_info(ticker).get("name", ticker)
+    except Exception:
+        _name = ticker
+    return _reco_cached(ticker, horizon, _pk, position, _name)
+
+
+def _render_reco(rec: dict, key_ns: str = "", compact: bool = False) -> None:
+    """Render the unified recommendation: verdict badge, plain reason, levels,
+    the other options to consider, and (collapsible) risks/catalysts."""
+    if not rec or rec.get("error"):
+        st.info("Not enough data to make a call on this one yet — check back after the next scan.")
+        return
+    v = rec.get("verdict", "WAIT")
+    col, bg, bdr, icon = _RECO_STYLE.get(v, _RECO_STYLE["WAIT"])
+    owns = rec.get("owns")
+    conf = rec.get("confidence", "—")
+    cc = "var(--pos)" if conf == "High" else "#f59e0b" if conf == "Medium" else "var(--muted)"
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
+        f'<span style="background:{bg};border:1px solid {bdr};color:{col};font-weight:800;'
+        f'font-size:1.05rem;padding:5px 16px;border-radius:8px;letter-spacing:.02em">{icon} {rec.get("label","")}</span>'
+        f'<span style="color:{cc};font-size:.75rem;font-weight:700">{conf} confidence</span>'
+        f'<span style="color:var(--faint);font-size:.75rem">· {rec.get("horizon","")} · '
+        f'{"you own this" if owns else "you don\'t own this"}</span></div>'
+        f'<p style="color:var(--fg);font-size:.92rem;line-height:1.7;margin:0 0 12px">{rec.get("reason","")}</p>',
+        unsafe_allow_html=True,
+    )
+    if rec.get("hold"):
+        st.markdown(f'<p style="color:var(--faint);font-size:.82rem;margin:0 0 10px">⏳ <b style="color:var(--muted)">How long to hold:</b> {rec["hold"]}</p>', unsafe_allow_html=True)
+    if compact:
+        _copts = rec.get("options", [])
+        if _copts:
+            _cchips = "".join(
+                f'<span style="display:inline-block;background:var(--surface);border:1px solid var(--border);'
+                f'border-radius:999px;padding:2px 10px;margin:0 5px 5px 0;font-size:.72rem;color:var(--muted)">'
+                f'{_RECO_STYLE.get(o["verdict"],("","","","•"))[3]} {o["label"]}</span>'
+                for o in _copts)
+            st.markdown(f'<div>{_cchips}</div>', unsafe_allow_html=True)
+        return
+    # Levels
+    _cur = rec.get("current", 0); _stp = rec.get("stop", 0)
+    _t1 = rec.get("target1", 0); _t2 = rec.get("target2", 0); _rr = rec.get("rr", 0)
+    _lbl = "Add near" if v == "BUY_MORE" else "Now"
+    st.markdown(
+        f'<div style="display:flex;gap:22px;flex-wrap:wrap;margin:0 0 10px">'
+        f'<span style="font-size:.85rem"><span style="color:var(--faint)">{_lbl}</span> <b>${_cur:.2f}</b></span>'
+        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Stop</span> <b style="color:var(--neg)">${_stp:.2f}</b></span>'
+        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Target 1</span> <b style="color:var(--pos)">${_t1:.2f}</b></span>'
+        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Target 2</span> <b style="color:var(--pos)">${_t2:.2f}</b></span>'
+        f'<span style="font-size:.85rem"><span style="color:var(--faint)">Reward:Risk</span> <b>{_rr}:1</b></span>'
+        f'</div>', unsafe_allow_html=True)
+    # Other options to consider
+    _opts = rec.get("options", [])
+    if _opts:
+        _chips = "".join(
+            f'<span style="display:inline-block;background:var(--surface);border:1px solid var(--border);'
+            f'border-radius:999px;padding:3px 11px;margin:0 6px 6px 0;font-size:.76rem;color:var(--muted)">'
+            f'{_RECO_STYLE.get(o["verdict"],("","","","•"))[3]} {o["label"]}</span>'
+            for o in _opts)
+        st.markdown(
+            f'<div style="margin-bottom:6px"><span style="color:var(--faint);font-size:.72rem;'
+            f'font-weight:700;letter-spacing:.06em;text-transform:uppercase">Other options</span></div>'
+            f'<div>{_chips}</div>', unsafe_allow_html=True)
+    _risks = rec.get("risks", []); _cats = rec.get("catalysts", [])
+    if _risks or _cats:
+        with st.expander("Why — what's driving this", expanded=False):
+            if rec.get("reasoning"):
+                st.markdown(f'<p style="color:var(--muted);font-size:.85rem;line-height:1.7">{rec["reasoning"]}</p>', unsafe_allow_html=True)
+            _rc1, _rc2 = st.columns(2)
+            with _rc1:
+                if _cats:
+                    st.markdown('<p style="color:var(--pos);font-size:.72rem;font-weight:700;letter-spacing:.06em;margin:0 0 4px">IN ITS FAVOR</p>', unsafe_allow_html=True)
+                    for c in _cats:
+                        st.markdown(f'<p style="color:var(--muted);font-size:.8rem;line-height:1.5;margin:0 0 6px">• {c}</p>', unsafe_allow_html=True)
+            with _rc2:
+                if _risks:
+                    st.markdown('<p style="color:var(--neg);font-size:.72rem;font-weight:700;letter-spacing:.06em;margin:0 0 4px">RISKS</p>', unsafe_allow_html=True)
+                    for r in _risks:
+                        st.markdown(f'<p style="color:var(--muted);font-size:.8rem;line-height:1.5;margin:0 0 6px">• {r}</p>', unsafe_allow_html=True)
+
+
 def _goto_analyze(ticker: str):
     """Jump to the Analyze page with this ticker prefilled (Deep Dive)."""
     st.session_state["dd_ticker"] = ticker
@@ -1891,6 +2009,10 @@ if page == "🏠  Dashboard":
     _scoring_msg = ("⏳ Scoring today's picks… the scanner is still building the latest list. "
                     "This updates automatically — check back in a moment.")
 
+    # ── Your trading style — drives the buy/hold/wait/sell calls below ──
+    st.markdown('<p class="section-label" style="margin-top:6px">📅 Your trading style</p>', unsafe_allow_html=True)
+    _db_horizon = _horizon_picker()
+
     # ── Today's Reversals — the app's focus: buy the bottom, sell the highs ────
     try:
         from scanner import load_scan_result as _lsr
@@ -1922,6 +2044,7 @@ if page == "🏠  Dashboard":
                         setup_type="swing", stars=_rs.stars, sector=_rs.sector)
             if _rc3.button("📊", key=f"dbr_d_{_rs.ticker}", use_container_width=True, help="Deep Dive"):
                 _goto_analyze(_rs.ticker)
+            _render_reco(_get_reco(_rs.ticker, _db_horizon, position=positions.get(_rs.ticker)), key_ns=f"dbrev_{_rs.ticker}", compact=True)
         st.markdown("---")
 
     ph1, ph2 = st.columns([5, 1])
@@ -2064,6 +2187,7 @@ if page == "🏠  Dashboard":
                                       sig.stop_pct, sig.gain_pct, sig.rr, sig.stars, sig.why_buy,
                                       signal_type=sig.signal_type,
                                       watch_buy_at=sig.watch_buy_at)
+                    _render_reco(_get_reco(sig.ticker, st.session_state.get("sp_horizon", "Short-term Swing"), position=positions.get(sig.ticker)), key_ns=f"dbsw_{idx_key}", compact=True)
 
             # BUY signals
             for sig in _db_show:
@@ -2349,11 +2473,15 @@ elif page == "📡  Scanner":
     except Exception:
         _swing_ranked = []
 
-    tab_swing, tab_dt, tab_more = st.tabs([
-        f"🌟  Swing Picks  ({len(_swing_ranked)})",
-        f"⚡  Day Trades  ({len(day_sigs)})",
-        "🔧  Raw Scans",
-    ])
+    # Default-open the tab matching the chosen trading style (Q2).
+    _sc_style = st.session_state.get("sp_horizon", "Short-term Swing")
+    _sw_lbl = f"🌟  Swing Picks  ({len(_swing_ranked)})"
+    _dt_lbl = f"⚡  Day Trades  ({len(day_sigs)})"
+    _raw_lbl = "🔧  Raw Scans"
+    if _sc_style == "Day Trading":
+        tab_dt, tab_swing, tab_more = st.tabs([_dt_lbl, _sw_lbl, _raw_lbl])
+    else:
+        tab_swing, tab_dt, tab_more = st.tabs([_sw_lbl, _dt_lbl, _raw_lbl])
 
     # ── Shared card renderer — same look/features as the Day Trades tab ────────
     def _render_swing_card(_p, _tr, _keyns):
@@ -3427,6 +3555,14 @@ elif page == "💼  Portfolio":
             st.info("No open stock positions yet. Add one above, or grab a pick "
                     "from the Scanner.")
         else:
+            # ── What to do with each holding (unified single source of truth) ──
+            st.markdown('<p class="section-label">📋 What to do with your holdings</p>', unsafe_allow_html=True)
+            _pf_horizon = _horizon_picker()
+            for _rtk, _rpp in positions.items():
+                st.markdown(f'<div style="font-weight:800;color:var(--fg);font-size:1rem;margin:12px 0 4px">{_rtk}</div>', unsafe_allow_html=True)
+                _render_reco(_get_reco(_rtk, _pf_horizon, position=_rpp), key_ns=f"pf_{_rtk}", compact=True)
+            st.markdown('<div class="thin-div" style="margin:14px 0"></div>', unsafe_allow_html=True)
+
             # ── One-time per session: run chart analysis for each position ────
             # (slow AI call — done outside the live fragment so it only runs once)
             for _pt, _pp in positions.items():
@@ -4310,6 +4446,14 @@ elif page == "🔎  Analyze":
             )
         with _hc2:
             live_single_ticker_bar(search_q, price_an, chg_pct_an)
+
+        # ── Unified recommendation — the single source of truth for this ticker ──
+        st.markdown('<div style="margin-top:14px"></div>', unsafe_allow_html=True)
+        _an_horizon = _horizon_picker()
+        _an_pos = get_positions().get(search_q)
+        with st.spinner("Reading the setup…"):
+            _an_reco = _get_reco(search_q, _an_horizon, position=_an_pos)
+        _render_reco(_an_reco, key_ns=f"an_{search_q}")
 
         # ── Tabs ───────────────────────────────────────────────────────────────
         st.markdown('<div style="margin-top:20px"></div>', unsafe_allow_html=True)
