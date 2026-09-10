@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+user_data/
+app_data/
+*.log
+.veterans_edge/

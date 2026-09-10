@@ -1,0 +1,299 @@
+{
+  "_meta": {
+    "version": "3.0",
+    "last_updated": "2026-08-04",
+    "basis": "Minervini (2x US Investing Champion), O'Neil (CANSLIM), Weinstein (Stage Analysis), Darvas (Box Theory), Ross Cameron (Momentum Day Trading)",
+    "description": "All numeric thresholds and weights \u00e2\u20ac\u201d three independent sections: swing, day_trade, vcp. Edit here to change strategy without touching code."
+  },
+  "swing": {
+    "_comment": "Swing trades \u00e2\u20ac\u201d multi-day to multi-week holds. Based on Minervini SEPA + O'Neil CANSLIM.",
+    "entry": {
+      "hard_gates": {
+        "_comment": "All must pass before scoring begins. Failing any gate = no signal.",
+        "rs_rank_min": 65.0,
+        "trend_template_min": 5,
+        "min_score": 45.0,
+        "min_rr": 1.5,
+        "min_bars": 60,
+        "volume_ratio_min": 1.0
+      },
+      "scoring": {
+        "ema_full_stack": 25,
+        "ema_partial_stack": 12,
+        "ema_below_200": -10,
+        "ema200_slope_positive": 15,
+        "ema200_slope_negative": -10,
+        "rsi_healthy_low": 40,
+        "rsi_healthy_high": 65,
+        "rsi_healthy_score": 15,
+        "rsi_overbought_threshold": 70,
+        "rsi_overbought_score": -15,
+        "rsi_oversold_threshold": 35,
+        "rsi_oversold_score": -5,
+        "adx_strong_threshold": 30,
+        "adx_strong_score": 15,
+        "adx_moderate_threshold": 25,
+        "adx_moderate_score": 8,
+        "volume_high_threshold": 1.5,
+        "volume_high_score": 15,
+        "volume_moderate_threshold": 1.2,
+        "volume_moderate_score": 7,
+        "macd_histogram_positive": 10,
+        "macd_fresh_cross": 10,
+        "regime_bull_quiet_bonus": 5,
+        "regime_bear_penalty": -15,
+        "fscore_multiplier": 1.5
+      },
+      "stars_thresholds": {
+        "three_star": 75,
+        "two_star": 60
+      },
+      "stops_targets": {
+        "stop_atr_mult_bull_quiet": 2.0,
+        "stop_atr_mult_other": 1.5,
+        "target1_atr_mult": 3.0,
+        "target2_atr_mult": 6.0
+      }
+    },
+    "exit": {
+      "_comment": "Swing-specific exit rules.",
+      "stale_trade": {
+        "days": 14,
+        "min_move_pct": 1.0
+      },
+      "overbought": {
+        "rsi_threshold": 72
+      },
+      "tighten_stop": {
+        "rsi_threshold": 65,
+        "atr_mult": 1.5
+      },
+      "watch_closely": {
+        "stop_dist_pct": 2.0,
+        "macd_fade_pct": 30.0,
+        "atr_cushion_min": 1.0
+      },
+      "trailing_stops": {
+        "breakeven_after_r": 1.0,
+        "trail_ema21_after_pct": 4.0,
+        "ema21_trail_buffer": 0.985
+      },
+      "take_profit": {
+        "partial_at_t1": true,
+        "partial_sell_pct": 50
+      }
+    }
+  },
+  "day_trade": {
+    "_comment": "Day trades \u00e2\u20ac\u201d enter and exit same day. Based on Ross Cameron gap-and-go + VWAP momentum.",
+    "entry": {
+      "hard_gates": {
+        "_comment": "All must pass before scoring. Day trades have stricter volume and range requirements.",
+        "min_atr_pct": 1.5,
+        "min_volume_ratio": 1.0,
+        "min_score": 40
+      },
+      "scoring": {
+        "atr_pct_high_threshold": 5.0,
+        "atr_pct_high_score": 35,
+        "atr_pct_mid_threshold": 3.0,
+        "atr_pct_mid_score": 25,
+        "atr_pct_low_threshold": 2.0,
+        "atr_pct_low_score": 12,
+        "volume_surge_threshold": 3.0,
+        "volume_surge_score": 35,
+        "volume_strong_threshold": 2.0,
+        "volume_strong_score": 25,
+        "volume_above_avg_threshold": 1.5,
+        "volume_above_avg_score": 15,
+        "volume_below_cutoff": 0.8,
+        "adx_strong_threshold": 35,
+        "adx_strong_score": 20,
+        "adx_moderate_threshold": 25,
+        "adx_moderate_score": 12,
+        "adx_weak_threshold": 20,
+        "adx_weak_score": 6,
+        "rsi_momentum_low": 50,
+        "rsi_momentum_high": 72,
+        "rsi_momentum_score": 15,
+        "rsi_overbought_threshold": 72,
+        "rsi_overbought_score": 5,
+        "rsi_recovering_low": 35,
+        "rsi_recovering_high": 50,
+        "rsi_recovering_score": 8,
+        "gap_up_strong_threshold": 3.0,
+        "gap_up_strong_score": 20,
+        "gap_up_mild_threshold": 1.5,
+        "gap_up_mild_score": 10,
+        "gap_down_threshold": 3.0,
+        "gap_down_score": 15,
+        "ema_alignment_score": 10,
+        "macd_positive_score": 8
+      },
+      "stars_thresholds": {
+        "three_star": 80,
+        "two_star": 65
+      },
+      "stops_targets": {
+        "stop_atr_mult": 0.75,
+        "target_atr_mult": 1.5
+      }
+    },
+    "exit": {
+      "_comment": "Day trade exits \u00e2\u20ac\u201d close before EOD, no overnight holds.",
+      "eod_close_hour": 15,
+      "eod_close_minute": 45,
+      "stale_trade": {
+        "minutes_no_move": 30,
+        "min_move_pct": 0.5
+      },
+      "stop_atr_mult": 0.75,
+      "target_rr": 2.0
+    }
+  },
+  "vcp": {
+    "_comment": "Volatility Contraction Pattern \u00e2\u20ac\u201d Minervini signature setup. Buy the breakout above the pivot.",
+    "detection": {
+      "min_prior_trend_pct": 25,
+      "min_base_days": 20,
+      "max_base_days": 65,
+      "near_pivot_threshold": 0.9,
+      "min_contractions": 2,
+      "contraction_depth_min": 3.0,
+      "contraction_depth_max": 45.0,
+      "vol_dry_up_threshold": 0.8,
+      "min_score": 4
+    },
+    "scoring": {
+      "pivots_3plus": 3,
+      "pivots_2": 1,
+      "last_depth_tight_max": 6.0,
+      "last_depth_tight_score": 3,
+      "last_depth_mid_max": 10.0,
+      "last_depth_mid_score": 2,
+      "last_depth_loose_max": 15.0,
+      "last_depth_loose_score": 1,
+      "vol_dry_up_score": 2,
+      "tightness_tight_max": 5.0,
+      "tightness_tight_score": 2,
+      "tightness_mid_max": 8.0,
+      "tightness_mid_score": 1,
+      "strong_prior_trend_pct": 50,
+      "strong_prior_trend_score": 1
+    },
+    "stars_thresholds": {
+      "three_star": 8,
+      "two_star": 6
+    },
+    "stops_targets": {
+      "stop_buffer_below_pivot": 0.98,
+      "target_extension": 1.0
+    }
+  },
+  "position_sizing": {
+    "_comment": "Applies to all trade types.",
+    "max_risk_per_trade_pct": 1.0,
+    "max_portfolio_heat_pct": 6.0,
+    "reduce_size_in_regimes": [
+      "BULL_VOLATILE",
+      "BEAR_QUIET",
+      "BEAR_VOLATILE"
+    ],
+    "size_reduction_in_choppy": 0.5
+  },
+  "momentum_reversal": {
+    "_comment": "Stage 1\u00e2\u2020\u20192 transition scan \u00e2\u20ac\u201d buys when momentum flips from negative to positive. Weinstein/Minervini early-stage entry.",
+    "hard_gates": {
+      "_comment": "Qualify via a MACD cross (reclaim) OR a catalyst gap. RSI/volume filters apply to all.",
+      "cross_lookback_days": 10,
+      "max_cross_age_days": 15,
+      "min_rsi": 40,
+      "min_200ma_proximity": 0.95,
+      "min_volume_ratio": 1.2,
+      "min_rr": 1.5,
+      "min_score": 45,
+      "deep_bottom": {
+        "_comment": "Path for stocks well BELOW the 200MA that are turning \u00e2\u20ac\u201d needs extra confirmation to avoid falling knives.",
+        "enabled": true,
+        "below_200ma_frac": 0.95,
+        "oversold_rsi": 32,
+        "oversold_lookback": 15,
+        "min_confirmations": 3
+      },
+      "catalyst": {
+        "_comment": "News proxy \u00e2\u20ac\u201d a recent gap-up on heavy volume. Lets a beaten-down or small-cap name qualify on a catalyst before a clean MACD cross.",
+        "enabled": true,
+        "lookback_days": 3,
+        "min_gap_pct": 5.0,
+        "min_vol_ratio": 2.0
+      }
+    },
+    "scoring": {
+      "macd_cross_today": 30,
+      "macd_cross_recent": 25,
+      "macd_cross_week": 18,
+      "macd_cross_old": 10,
+      "rsi_strong": 20,
+      "rsi_reclaimed": 15,
+      "rsi_near": 8,
+      "above_200ma": 20,
+      "near_200ma": 10,
+      "volume_surge": 20,
+      "volume_strong": 15,
+      "volume_above": 8,
+      "ema_golden": 15,
+      "ema_near_golden": 8,
+      "adx_trending": 10,
+      "oversold_bounce": 12,
+      "higher_low": 10,
+      "reclaimed_ema20": 8,
+      "catalyst_gap": 20,
+      "three_star": 80,
+      "two_star": 60
+    },
+    "stops_targets": {
+      "stop_atr_mult": 1.5,
+      "target1_atr_mult": 3.0,
+      "target2_atr_mult": 6.0,
+      "deep_bottom_stop_atr_mult": 2.0,
+      "deep_bottom_target1_atr_mult": 4.0,
+      "deep_bottom_target2_atr_mult": 7.5
+    }
+  },
+  "pullback": {
+    "_comment": "Intraday pullback day-trades. Enter at support (shorts cover), exit at resistance (shorts enter). Score ranks the best setup.",
+    "hard_gates": {
+      "near_support_pct": 0.01,
+      "rsi_low": 33,
+      "rsi_high": 60,
+      "min_rr": 1.5,
+      "min_score": 45
+    },
+    "scoring": {
+      "support_2_touch": 8,
+      "support_3_touch": 15,
+      "support_4_touch": 22,
+      "ma_confluence": 12,
+      "ema_stack": 8,
+      "above_ema50": 6,
+      "adx_moderate": 6,
+      "adx_strong": 10,
+      "vol_dry_pullback": 8,
+      "rsi_reset": 8,
+      "bullish_bar": 8,
+      "rsi_turning_up": 6,
+      "reclaim_ema20": 6,
+      "vol_bounce_1_2": 6,
+      "vol_bounce_1_5": 10,
+      "rr_2": 8,
+      "rr_3": 14,
+      "prox_tight": 6,
+      "prox_mid": 3,
+      "three_star": 75,
+      "two_star": 55
+    },
+    "stops_targets": {
+      "stop_atr_mult": 0.5
+    }
+  }
+}

@@ -1,0 +1,26 @@
+# Render Blueprint for the StockPal hybrid staging service (FastAPI + built React).
+# One web service serves the API (/api/*) and the React app (/). Its own disk +
+# accounts — SEPARATE from the live Streamlit app, so testing here never touches prod.
+services:
+  - type: web
+    name: stockpal-hybrid-staging
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FINNHUB_API_KEY
+        sync: false          # set in the dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+    disk:
+      name: stockpal-hybrid-data
+      mountPath: /var/data
+      sizeGB: 1
