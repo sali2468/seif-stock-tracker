@@ -28,6 +28,18 @@ import reco as _reco
 import auth as _auth
 import state as _state
 
+# First-boot scan seed: on a fresh disk the Scanner would be empty, so drop the
+# bundled scan into the cache dir if none exists yet (staging convenience).
+try:
+    import shutil as _shutil
+    import scanner as _scanner
+    _seed = os.path.join(_HERE, "seed_scan.pkl")
+    if os.path.exists(_seed) and not os.path.exists(_scanner._RESULT_FILE):
+        os.makedirs(os.path.dirname(_scanner._RESULT_FILE), exist_ok=True)
+        _shutil.copyfile(_seed, _scanner._RESULT_FILE)
+except Exception:
+    pass
+
 app = FastAPI(title="StockPal API", version="0.2.0")
 
 app.add_middleware(
