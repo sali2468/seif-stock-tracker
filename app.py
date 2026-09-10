@@ -1691,7 +1691,7 @@ def _render_fund_section(snap: dict, live_price: float) -> None:
                     "var(--pos)" if surp and surp > 0 else "var(--neg)" if surp and surp < 0 else "var(--faint)")
         + _fund_row("Revenue Growth YoY", f"{rg:.1f}%" if rg is not None else "—",
                     "var(--pos)" if rg and rg > 10 else "var(--neg)" if rg and rg < 0 else "var(--muted)")
-        + _fund_row("Profit Margin", f"{pm * 100:.1f}%" if pm else "—")
+        + _fund_row("Profit Margin", f"{pm:.1f}%" if pm else "—")
         + _fund_row("P/E Ratio", str(pe) if pe else "—")
         + _fund_row("Insider Activity", ins_sig, ins_col),
         unsafe_allow_html=True,
@@ -3102,7 +3102,7 @@ elif page == "📡  Scanner":
                                            "var(--pos)" if _dsurp and _dsurp>0 else "var(--neg)" if _dsurp and _dsurp<0 else "var(--faint)")
                                     + _ddr("Revenue Growth", f"{_drg:.1f}%" if _drg is not None else "—",
                                            "var(--pos)" if _drg and _drg>10 else "var(--neg)" if _drg and _drg<0 else "var(--muted)")
-                                    + _ddr("Profit Margin", f"{_dpm*100:.1f}%" if _dpm else "—")
+                                    + _ddr("Profit Margin", f"{_dpm:.1f}%" if _dpm else "—")
                                     + _ddr("Insider Activity", _din.get("signal","—").title(),
                                            "var(--pos)" if _din.get("signal")=="buying" else "var(--neg)" if _din.get("signal")=="selling" else "var(--faint)"),
                                     unsafe_allow_html=True,

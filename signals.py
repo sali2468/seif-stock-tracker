@@ -348,7 +348,7 @@ def score_entry(ticker: str, regime: dict, _df=None) -> Optional[BuySignal]:
         elif upside >= 15:
             _lead_parts.append((2, f"Analysts have a consensus target of ${_tgt:.2f} on {_short_name} ({upside:.0f}% above current price)."))
     if _rg is not None and _rg >= 15:
-        _lead_parts.append((2, f"{_short_name} is growing revenue at {_rg:.0f}% year-over-year" + (f" with a {_pm*100:.0f}% profit margin" if _pm and _pm > 0.1 else "") + " — fundamentals back the chart."))
+        _lead_parts.append((2, f"{_short_name} is growing revenue at {_rg:.0f}% year-over-year" + (f" with a {_pm:.0f}% profit margin" if _pm and _pm > 10 else "") + " — fundamentals back the chart."))
     if _surp is not None and _surp >= 8:
         _lead_parts.append((2, f"{_short_name} beat earnings estimates by {_surp:.0f}% last quarter."))
     if insider.get("signal") == "buying" and abs(_ins_net) > 5000:

@@ -394,7 +394,7 @@ Earnings: {'in ' + str(dte) + ' days (' + str(e.get('next_date','')) + ')' if 0 
 Last earnings surprise: {(str(surprise) + '%') if surprise is not None else '—'}
 Insider activity: {ins.get('signal','—')} ({ins.get('summary','—')})
 Revenue growth YoY: {str(fins.get('revenue_growth_yoy')) + '%' if fins.get('revenue_growth_yoy') is not None else '—'}
-Profit margin: {str(round(fins.get('profit_margin',0)*100,1)) + '%' if fins.get('profit_margin') else '—'}
+Profit margin: {str(round(fins.get('profit_margin',0),1)) + '%' if fins.get('profit_margin') else '—'}
 P/E ratio: {fins.get('pe_ratio','—')}
 """
 
@@ -518,7 +518,7 @@ Next earnings: {'⚠️ in ' + str(dte) + ' days — earnings risk!' if 0 < dte 
 Last EPS surprise: {(str(surp)+'%') if surp is not None else '—'}
 Insider activity: {ins.get('signal','—')} ({ins.get('summary','—')})
 Revenue growth YoY: {str(fi.get('revenue_growth_yoy'))+'%' if fi.get('revenue_growth_yoy') is not None else '—'}
-Profit margin: {str(round(fi.get('profit_margin',0)*100,1))+'%' if fi.get('profit_margin') else '—'}
+Profit margin: {str(round(fi.get('profit_margin',0),1))+'%' if fi.get('profit_margin') else '—'}
 """
 
     prompt = f"""You are a professional swing trader and position manager with 20 years of experience.
