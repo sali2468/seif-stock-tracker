@@ -169,6 +169,9 @@ def _create_checkout(username: str, email: str) -> str:
         client_reference_id=username,
         metadata={"username": username},
         allow_promotion_codes=True,
+        # Managed Payments is on by default on some accounts and demands a product
+        # tax code; opt out so a plain $20/mo subscription checkout just works.
+        managed_payments={"enabled": False},
     )
     if acct.get("stripe_customer_id"):
         kwargs["customer"] = acct["stripe_customer_id"]
