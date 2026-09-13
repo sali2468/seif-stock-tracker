@@ -153,6 +153,32 @@ def _active(username: str) -> bool:
         return acct.get("sub_status") in _ACTIVE
 
 
+def _reconcile(username: str, acct: dict) -> bool:
+    """Self-heal: find this user's subscription in Stripe and record it, even if we
+    never stored the id (e.g. the Checkout redirect lost the session). Matched by the
+    account email AND our metadata.username, so it never claims someone else's sub."""
+    stripe = _stripe()
+    email = (acct or {}).get("email")
+    if not stripe or not email:
+        return False
+    try:
+        custs = stripe.Customer.list(email=email, limit=10)
+        for c in getattr(custs, "data", []) or []:
+            subs = stripe.Subscription.list(customer=c.id, status="all", limit=20)
+            for s in getattr(subs, "data", []) or []:
+                status = getattr(s, "status", None)
+                meta = getattr(s, "metadata", None) or {}
+                uname = meta.get("username") if hasattr(meta, "get") else None
+                if status in _ACTIVE and (uname is None or uname == username):
+                    _set_acct(username, stripe_customer_id=c.id, stripe_subscription_id=s.id,
+                              sub_status=status, sub_checked_at=time.time())
+                    log.info("reconciled existing Stripe subscription for %s", username)
+                    return True
+    except Exception as e:
+        log.warning("subscription reconcile failed: %s", e)
+    return False
+
+
 # ── Stripe hosted flows ───────────────────────────────────────────────────────
 def _create_checkout(username: str, email: str) -> str:
     stripe = _stripe()
@@ -243,6 +269,8 @@ def require_subscription() -> None:
     if is_exempt(username, acct):
         return
     if _active(username):
+        return
+    if _reconcile(username, acct):   # self-heal a sub we didn't record (e.g. lost redirect)
         return
     _render_paywall(username, acct)
     st.stop()
