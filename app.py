@@ -1177,6 +1177,12 @@ with st.sidebar:
         except Exception:
             pass
         _logout(); st.rerun()
+    # Manage subscription (Stripe Billing Portal) — renders only for paying subscribers.
+    try:
+        import billing as _billing
+        _billing.render_manage_link()
+    except Exception:
+        pass
     if _is_admin():
         with st.expander("👑 Admin · users"):
             for _usr in list_users():

@@ -330,6 +330,27 @@ def _render_paywall(username: str, acct: dict) -> None:
         pass
 
 
+def render_manage_link() -> None:
+    """Sidebar 'Manage subscription' link → Stripe's hosted Billing Portal (update
+    card, cancel, view invoices). Shows ONLY for real subscribers — accounts with a
+    Stripe customer id; grandfathered/admin users have none, so nothing renders."""
+    if not _enabled():
+        return
+    username = auth.current_user()
+    if not username:
+        return
+    acct = _acct(username)
+    if not acct.get("stripe_customer_id"):
+        return
+    url = st.session_state.get("_portal_url")
+    if not url or (time.time() - st.session_state.get("_portal_ts", 0)) > 600:
+        url = _create_portal(username)
+        st.session_state["_portal_url"] = url
+        st.session_state["_portal_ts"] = time.time()
+    if url:
+        st.link_button("💳 Manage subscription", url, use_container_width=True)
+
+
 # Run the one-time grandfather migration when this module is imported under an
 # enabled+configured paywall (marker-guarded, so it does real work only once).
 try:
