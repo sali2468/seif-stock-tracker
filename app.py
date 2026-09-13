@@ -76,6 +76,16 @@ if not st.session_state.get("authenticated") and _cookies.get("ve_auth"):
 if not require_login():
     st.stop()
 
+# ── Paywall gate — new users subscribe ($20/mo, free trial); existing users are
+# grandfathered free. No-op unless PAYWALL_ENABLED is set, so this is safe to ship
+# dark and switch on only after Stripe is configured and tested.
+try:
+    from billing import require_subscription
+    require_subscription()
+except Exception as _billing_err:
+    import logging as _lg
+    _lg.getLogger("billing").warning("paywall gate skipped: %s", _billing_err)
+
 # Refresh the sliding 15-min cookie (throttled to avoid write loops)
 if _cm is not None and (_time.time() - st.session_state.get("_cookie_ts", 0) > 45):
     try:
