@@ -218,6 +218,60 @@ button[kind="secondary"]:hover { background: var(--surface-hover) !important; }
 @keyframes pulse  { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.75); } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn .3s ease; }
+
+/* ══ 14. Responsive — tablet (≤1024px) ═══════════════════════════════════════ */
+@media (max-width: 1024px) {
+    .block-container { padding: 0.5rem 1.25rem 2.5rem !important; max-width: 100% !important; }
+    section[data-testid="stSidebar"] { min-width: 210px !important; }
+    .page-title { font-size: 1.55rem; }
+    .tile-value { font-size: 1.5rem; }
+}
+
+/* ══ 15. Responsive — phone (≤640px) ═════════════════════════════════════════ */
+@media (max-width: 640px) {
+    .block-container { padding: 0.5rem 0.85rem 3.5rem !important; }
+
+    /* Sidebar becomes a slide-in overlay drawer. Undo the desktop "locked open"
+       rules so the built-in collapse / hamburger controls work on a phone. */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stExpandSidebarButton"] { display: flex !important; }
+    section[data-testid="stSidebar"] {
+        min-width: 80vw !important; width: 80vw !important; max-width: 320px;
+        z-index: 1000 !important; box-shadow: 0 0 48px rgba(0,0,0,.55);
+    }
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        transform: translateX(-105%) !important; min-width: 0 !important; width: 0 !important;
+    }
+    section[data-testid="stSidebar"][aria-expanded="true"] { transform: none !important; }
+
+    /* Stack Streamlit columns full-width instead of squeezing them side-by-side. */
+    [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.5rem !important; }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        flex: 1 1 100% !important; min-width: 100% !important; width: 100% !important;
+    }
+
+    /* Scale type + padding down a notch for small screens. */
+    .page-title    { font-size: 1.35rem; }
+    .page-sub      { font-size: .82rem; margin-bottom: 12px; }
+    .tile          { padding: 13px 12px; }
+    .tile-value    { font-size: 1.3rem; }
+    .card          { padding: 14px 15px; }
+    .ai-card       { padding: 16px 16px; }
+    .regime-banner { padding: 12px 15px; }
+    .ticker-big    { font-size: 1.25rem; }
+
+    /* Tabs wrap instead of overflowing the width. */
+    .stTabs [data-baseweb="tab-list"] { flex-wrap: wrap; }
+    .stTabs [data-baseweb="tab"] { padding: 8px 13px; font-size: .82rem; }
+
+    /* Wide tables scroll inside their own box instead of stretching the page. */
+    [data-testid="stMarkdownContainer"] .holdings { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Bigger touch targets for buttons on a phone. */
+    .stButton button, button[kind="primary"], button[kind="secondary"] { min-height: 42px !important; }
+}
 """
 
 
