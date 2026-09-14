@@ -232,10 +232,22 @@ button[kind="secondary"]:hover { background: var(--surface-hover) !important; }
     .block-container { padding: 0.5rem 0.85rem 3.5rem !important; }
 
     /* Sidebar becomes a slide-in overlay drawer. Undo the desktop "locked open"
-       rules so the built-in collapse / hamburger controls work on a phone. */
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="stExpandSidebarButton"] { display: flex !important; }
+       rules so the built-in collapse / hamburger controls work on a phone.
+       The reopen hamburger lives inside the toolbar (hidden on desktop) and needs
+       an explicit size + higher specificity to beat Streamlit's own rules. */
+    header[data-testid="stHeader"] { height: auto !important; min-height: 2.6rem !important; }
+    header[data-testid="stHeader"] [data-testid="stToolbar"] { display: flex !important; }
+    [data-testid="stSidebarCollapseButton"] { display: flex !important; }
+    header[data-testid="stHeader"] button[data-testid="stExpandSidebarButton"],
+    [data-testid="stToolbar"] button[data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapsedControl"] {
+        display: flex !important; visibility: visible !important; opacity: 1 !important;
+        min-width: 40px !important; width: 40px !important; height: 40px !important;
+        align-items: center !important; justify-content: center !important;
+        background: var(--surface) !important; border: 1px solid var(--border-strong) !important;
+        border-radius: 10px !important;
+    }
+    header[data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"] { color: var(--fg) !important; }
     section[data-testid="stSidebar"] {
         min-width: 80vw !important; width: 80vw !important; max-width: 320px;
         z-index: 1000 !important; box-shadow: 0 0 48px rgba(0,0,0,.55);
