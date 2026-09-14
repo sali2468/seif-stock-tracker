@@ -30,48 +30,52 @@ _BASE_DIR    = os.getenv("DATA_DIR") or os.path.dirname(__file__)
 _LEGACY_FILE = os.path.join(_BASE_DIR, "positions.json")
 _USER_ROOT   = os.path.join(_BASE_DIR, "user_data")
 
+# Curated starter set — available ON DEMAND (Watchlist → "Load Starter List"),
+# NOT auto-loaded. New accounts start with an EMPTY watchlist and add their own.
+STARTER_WATCHLIST = [
+    # ── Technology ────────────────────────────────────────────────────────
+    "AAPL","MSFT","NVDA","AMD","INTC","QCOM","AVGO","TXN",
+    "MU","MRVL","AMAT","KLAC","LRCX","CRM","ORCL","ADBE",
+    "NOW","SNOW","PLTR","COIN","UBER","LYFT","SHOP","NET",
+    # ── Communication Services ────────────────────────────────────────────
+    "META","GOOGL","NFLX","DIS","CMCSA","T","VZ","ROKU","SNAP","PINS",
+    # ── Consumer Discretionary ────────────────────────────────────────────
+    "AMZN","TSLA","NKE","MCD","SBUX","HD","LOW","TJX",
+    "BKNG","ABNB","GM","F","RIVN","LCID","RH","DECK",
+    # ── Consumer Staples ──────────────────────────────────────────────────
+    "WMT","COST","PG","KO","PEP","PM","MO","MDLZ","CL","EL",
+    # ── Healthcare & Biotech ──────────────────────────────────────────────
+    "UNH","JNJ","PFE","ABBV","MRK","LLY","TMO","DHR",
+    "VRTX","REGN","BIIB","GILD","MRNA","DXCM","ISRG",
+    "VKTX","SMMT","RXRX","ACMR",
+    # ── Financials ────────────────────────────────────────────────────────
+    "JPM","BAC","GS","MS","WFC","C","V","MA","AXP",
+    "BLK","SCHW","COF","SQ","PYPL","HOOD","SOFI",
+    # ── Energy ────────────────────────────────────────────────────────────
+    "XOM","CVX","COP","EOG","SLB","MPC","PSX","VLO",
+    "OXY","DVN","FANG","HAL","XLE",
+    # ── Industrials & Aerospace ───────────────────────────────────────────
+    "CAT","DE","HON","UNP","LMT","RTX","GE","BA",
+    "NOC","GD","HII","SPR","RKLB","LUNR","ACHR","JOBY",
+    # ── Materials ─────────────────────────────────────────────────────────
+    "FCX","NEM","GOLD","LIN","APD","NUE","X","CLF","AA",
+    # ── Real Estate ───────────────────────────────────────────────────────
+    "AMT","PLD","EQIX","SPG","O","VICI","IRM",
+    # ── Utilities ─────────────────────────────────────────────────────────
+    "NEE","DUK","SO","XEL","AEP","EXC",
+    # ── Airlines & Travel ─────────────────────────────────────────────────
+    "DAL","UAL","AAL","LUV","ALK","CCL","RCL","NCLH",
+    # ── Broad ETFs ────────────────────────────────────────────────────────
+    "SPY","QQQ","IWM","GLD","TLT","SLV",
+    "XLF","XLK","XLE","XLV","XLI","XLY","XLP","XLB","XLRE","XLU",
+]
+
 DEFAULT_STATE = {
     "positions": {},      # ticker → trade dict
     "closed":    [],      # list of closed trade dicts
     "options":   {},      # id → option position dict
     "closed_options": [], # list of closed option dicts
-    "watchlist": [
-        # ── Technology ────────────────────────────────────────────────────────
-        "AAPL","MSFT","NVDA","AMD","INTC","QCOM","AVGO","TXN",
-        "MU","MRVL","AMAT","KLAC","LRCX","CRM","ORCL","ADBE",
-        "NOW","SNOW","PLTR","COIN","UBER","LYFT","SHOP","NET",
-        # ── Communication Services ────────────────────────────────────────────
-        "META","GOOGL","NFLX","DIS","CMCSA","T","VZ","ROKU","SNAP","PINS",
-        # ── Consumer Discretionary ────────────────────────────────────────────
-        "AMZN","TSLA","NKE","MCD","SBUX","HD","LOW","TJX",
-        "BKNG","ABNB","GM","F","RIVN","LCID","RH","DECK",
-        # ── Consumer Staples ──────────────────────────────────────────────────
-        "WMT","COST","PG","KO","PEP","PM","MO","MDLZ","CL","EL",
-        # ── Healthcare & Biotech ──────────────────────────────────────────────
-        "UNH","JNJ","PFE","ABBV","MRK","LLY","TMO","DHR",
-        "VRTX","REGN","BIIB","GILD","MRNA","DXCM","ISRG",
-        "VKTX","SMMT","RXRX","ACMR",
-        # ── Financials ────────────────────────────────────────────────────────
-        "JPM","BAC","GS","MS","WFC","C","V","MA","AXP",
-        "BLK","SCHW","COF","SQ","PYPL","HOOD","SOFI",
-        # ── Energy ────────────────────────────────────────────────────────────
-        "XOM","CVX","COP","EOG","SLB","MPC","PSX","VLO",
-        "OXY","DVN","FANG","HAL","XLE",
-        # ── Industrials & Aerospace ───────────────────────────────────────────
-        "CAT","DE","HON","UNP","LMT","RTX","GE","BA",
-        "NOC","GD","HII","SPR","RKLB","LUNR","ACHR","JOBY",
-        # ── Materials ─────────────────────────────────────────────────────────
-        "FCX","NEM","GOLD","LIN","APD","NUE","X","CLF","AA",
-        # ── Real Estate ───────────────────────────────────────────────────────
-        "AMT","PLD","EQIX","SPG","O","VICI","IRM",
-        # ── Utilities ─────────────────────────────────────────────────────────
-        "NEE","DUK","SO","XEL","AEP","EXC",
-        # ── Airlines & Travel ─────────────────────────────────────────────────
-        "DAL","UAL","AAL","LUV","ALK","CCL","RCL","NCLH",
-        # ── Broad ETFs ────────────────────────────────────────────────────────
-        "SPY","QQQ","IWM","GLD","TLT","SLV",
-        "XLF","XLK","XLE","XLV","XLI","XLY","XLP","XLB","XLRE","XLU",
-    ],
+    "watchlist": [],      # empty by default — each account curates its own
 }
 
 
@@ -329,6 +333,16 @@ def update_managed_flags(ticker: str, **flags):
         _save(state)
 
 
+def set_position_horizon(ticker: str, horizon: str):
+    """Store a per-position trading style (Day Trading / Short-term Swing /
+    Long-term Swing) so each holding's recommendation can be tuned independently."""
+    state = _load()
+    ticker = ticker.upper()
+    if ticker in state["positions"]:
+        state["positions"][ticker]["horizon"] = horizon
+        _save(state)
+
+
 def update_stop(ticker: str, new_stop: float):
     state = _load()
     ticker = ticker.upper()
@@ -397,6 +411,48 @@ def set_watchlist(tickers: list):
             clean.append(u)
     state["watchlist"] = clean
     _save(state)
+
+
+_WL_MIGRATE_MARKER = os.path.join(_BASE_DIR, ".watchlist_migrated")
+
+
+def clear_autopopulated_watchlists_once():
+    """One-time per disk: empty any watchlist that EXACTLY matches the old auto-loaded
+    starter list — i.e. accounts that were auto-populated and never curated. Any list
+    the user changed (added/removed a ticker) no longer matches and is left untouched.
+    Guarded by a marker file so it runs once and never fights a user's later edits."""
+    if os.path.exists(_WL_MIGRATE_MARKER):
+        return
+
+    def _clear_if_default(path):
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except Exception:
+            return
+        if data.get("watchlist") == STARTER_WATCHLIST:
+            data["watchlist"] = []
+            try:
+                tmp = path + ".tmp"
+                with open(tmp, "w") as f:
+                    json.dump(data, f, indent=2, default=str)
+                os.replace(tmp, path)
+            except Exception:
+                pass
+
+    try:
+        if os.path.isdir(_USER_ROOT):
+            for _u in os.listdir(_USER_ROOT):
+                p = os.path.join(_USER_ROOT, _u, "positions.json")
+                if os.path.exists(p):
+                    _clear_if_default(p)
+        if os.path.exists(_LEGACY_FILE):
+            _clear_if_default(_LEGACY_FILE)
+        os.makedirs(os.path.dirname(_WL_MIGRATE_MARKER), exist_ok=True)
+        with open(_WL_MIGRATE_MARKER, "w") as f:
+            f.write("done")
+    except Exception:
+        pass
 
 
 def load_sp500() -> list:
@@ -496,3 +552,10 @@ def mark_option_alerted(oid: str, flag: str):
     if oid in state.get("options", {}):
         state["options"][oid][flag] = True
         _save(state)
+
+
+# One-time cleanup of auto-populated default watchlists (marker-guarded, safe).
+try:
+    clear_autopopulated_watchlists_once()
+except Exception:
+    pass

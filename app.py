@@ -115,6 +115,7 @@ from state import (
     add_to_watchlist, remove_from_watchlist, set_watchlist, load_sp500,
     add_option, get_options, get_closed_options,
     close_option, mark_option_alerted, mark_position_alerted,
+    set_position_horizon,
 )
 from alerts import (
     alert_stock_signal, alert_stock_stop, alert_stock_target,
@@ -3583,10 +3584,19 @@ elif page == "💼  Portfolio":
         else:
             # ── What to do with each holding (unified single source of truth) ──
             st.markdown('<p class="section-label">📋 What to do with your holdings</p>', unsafe_allow_html=True)
-            _pf_horizon = _horizon_picker()
+            st.caption("Set a trading style per holding — the call and hold estimate update to match. Change it any time.")
+            import reco as _reco
             for _rtk, _rpp in positions.items():
                 st.markdown(f'<div style="font-weight:800;color:var(--fg);font-size:1rem;margin:12px 0 4px">{_rtk}</div>', unsafe_allow_html=True)
-                _render_reco(_get_reco(_rtk, _pf_horizon, position=_rpp), key_ns=f"pf_{_rtk}", compact=True)
+                # Per-position trading style (persists on the position, changeable any time).
+                _stored_h = _rpp.get("horizon") if _rpp.get("horizon") in _reco.HORIZONS else _reco.DEFAULT_HORIZON
+                _ph = st.radio(
+                    "Trading style", _reco.HORIZONS, index=_reco.HORIZONS.index(_stored_h),
+                    key=f"pfh_{_rtk}", horizontal=True, label_visibility="collapsed")
+                if _ph != _rpp.get("horizon"):
+                    set_position_horizon(_rtk, _ph)
+                    _rpp = get_positions().get(_rtk, _rpp)
+                _render_reco(_get_reco(_rtk, _ph, position=_rpp), key_ns=f"pf_{_rtk}", compact=True)
             st.markdown('<div class="thin-div" style="margin:14px 0"></div>', unsafe_allow_html=True)
 
             # ── One-time per session: run chart analysis for each position ────
@@ -5122,10 +5132,11 @@ elif page == "👁️  Watchlist":
                     _refresh()
                 else:
                     st.error("Fetch failed — check internet connection")
-            if _ba2.button("🔄 Reset to Default", use_container_width=True):
-                from state import DEFAULT_STATE as _DS
-                set_watchlist(_DS["watchlist"])
-                st.toast("Watchlist reset to defaults")
+            if _ba2.button("⭐ Load Starter List", use_container_width=True):
+                from state import STARTER_WATCHLIST as _SW
+                _cur = [w if isinstance(w, str) else w.get("ticker", "") for w in get_watchlist()]
+                set_watchlist(list(dict.fromkeys(_cur + _SW)))   # add starter set, keep existing
+                st.toast("Starter list added")
                 _refresh()
             if _ba3.button("🗑️ Clear All", use_container_width=True):
                 set_watchlist([])
