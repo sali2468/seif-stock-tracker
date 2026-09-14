@@ -253,9 +253,13 @@ button[kind="secondary"]:hover { background: var(--surface-hover) !important; }
         z-index: 1000 !important; box-shadow: 0 0 48px rgba(0,0,0,.55);
     }
     section[data-testid="stSidebar"][aria-expanded="false"] {
-        transform: translateX(-105%) !important; min-width: 0 !important; width: 0 !important;
+        /* translateX % is relative to the element's own (now 0) width, so use vw to
+           actually slide it off-screen; visibility+overflow hide the content that
+           would otherwise spill down the left edge as one letter per line. */
+        transform: translateX(-110vw) !important; visibility: hidden !important; overflow: hidden !important;
+        min-width: 0 !important; width: 0 !important;
     }
-    section[data-testid="stSidebar"][aria-expanded="true"] { transform: none !important; }
+    section[data-testid="stSidebar"][aria-expanded="true"] { transform: none !important; visibility: visible !important; }
 
     /* Stack Streamlit columns full-width instead of squeezing them side-by-side. */
     [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.5rem !important; }
